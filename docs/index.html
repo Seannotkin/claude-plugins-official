@@ -95,9 +95,9 @@
   @keyframes pop { 0% { transform: scale(.4) rotate(-40deg); } 60% { transform: scale(1.3) rotate(8deg); } 100% { transform: none; } }
   @keyframes droop { 0% { transform: translateY(-12px) rotate(-30deg); opacity: .3; } 100% { transform: rotate(18deg) translateY(2px); opacity: 1; } }
   @keyframes settle { from { opacity: .25; } to { opacity: 1; } }
-  .tabs { display: flex; gap: 6px; }
+  .tabs { display: flex; gap: 4px; flex-wrap: wrap; }
   .tabs button {
-    min-height: 44px; padding: 0 15px; background: none; border: 0; font-weight: 600; white-space: nowrap;
+    min-height: 44px; padding: 0 12px; background: none; border: 0; font-weight: 600; white-space: nowrap;
     color: var(--on-sky-soft); border-radius: 22px 6px 22px 6px;
   }
   .tabs button[aria-selected="true"] { background: var(--on-sky); color: var(--sky-2); }
@@ -154,6 +154,10 @@
   .edit .ghost.move { width: 44px; padding: 0; font-size: 18px; }
   .txt .note { font-size: 13px; color: var(--leaf); }
   #bkNudge { color: var(--autumn); font-weight: 600; }
+  .daynote { display: flex; flex-direction: column; gap: 8px; }
+  .daynote .label { margin: 0; }
+  .daynote .quiet { font-size: 13px; min-height: 18px; }
+  #journalList .txt .t { line-height: 1.5; }
   .when { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   .when select { flex: 0 1 auto; font-size: 16px; height: 44px; }
   .when .days { display: flex; gap: 5px; flex-wrap: wrap; }
@@ -215,6 +219,7 @@
         <button type="button" role="tab" id="tabDaily" aria-controls="viewDaily">כל יום</button>
         <button type="button" role="tab" id="tabWeek" aria-controls="viewWeek">השבוע</button>
         <button type="button" role="tab" id="tabBdays" aria-controls="viewBdays">ימי הולדת</button>
+        <button type="button" role="tab" id="tabJournal" aria-controls="viewJournal">יומן</button>
       </div>
       <h1 class="title" id="title"></h1>
       <div class="sub" id="sub" aria-live="polite"></div>
@@ -239,6 +244,11 @@
       <ul class="rows" id="todayList" hidden></ul>
       <p class="label" id="lateLabel" hidden>נשאר מימים קודמים</p>
       <ul class="rows" id="lateList" hidden></ul>
+      <div class="daynote">
+        <label class="label" for="dayNote">משפט לסיום היום</label>
+        <textarea class="fill" id="dayNote" rows="2" maxlength="240" placeholder="מה היה טוב היום? משפט אחד מספיק…"></textarea>
+        <span class="quiet" id="noteMsg" aria-live="polite"></span>
+      </div>
       <p class="foot" id="footDaily"></p>
     </section>
 
@@ -277,6 +287,13 @@
         <div class="addline"><button class="plant" type="button" id="bdImport">הוסף את הרשימה</button><span class="quiet" id="bdMsg" aria-live="polite"></span></div>
       </details>
       <p class="foot" id="footBdays"></p>
+    </section>
+
+    <!-- Page 4: the journal. One sentence per day, newest first. -->
+    <section class="gutter" id="viewJournal" role="tabpanel" aria-labelledby="tabJournal" hidden>
+      <div class="trail" id="journalList"></div>
+      <p class="quiet" id="journalEmpty" hidden>היומן עוד ריק. בסוף היום, כתוב משפט אחד בתחתית העמוד ״כל יום״, והוא יישמר כאן.</p>
+      <p class="foot" id="footJournal"></p>
     </section>
 
     <section class="gutter" id="backupBox">
@@ -318,13 +335,13 @@
 
   // routine: tasks that repeat every day. marks: what was ticked on each date.
   // dated: one-off tasks kept under the date they belong to.
-  function blank() { return { routine: [], marks: {}, dated: {}, bdays: [] }; }
+  function blank() { return { routine: [], marks: {}, dated: {}, bdays: [], notes: {} }; }
   function load() {
     try {
       var raw = localStorage.getItem(KEY);
       if (raw) {
         var d = JSON.parse(raw);
-        if (d && d.routine && d.marks && d.dated) { if (!d.bdays) d.bdays = []; return d; }
+        if (d && d.routine && d.marks && d.dated) { if (!d.bdays) d.bdays = []; if (!d.notes) d.notes = {}; return d; }
       }
       var old = localStorage.getItem(OLD_KEY);
       if (old) {
@@ -347,7 +364,7 @@
   }
 
   var today = iso(new Date());
-  var view = location.hash === '#week' ? 'week' : location.hash === '#birthdays' ? 'bdays' : 'daily';
+  var view = location.hash === '#week' ? 'week' : location.hash === '#birthdays' ? 'bdays' : location.hash === '#journal' ? 'journal' : 'daily';
   var editing = null;
   var justId = null, justKind = ''; // the row touched a moment ago, so it can animate in
   var undoFn = null, toastTimer = null;
@@ -1165,6 +1182,7 @@
     var tl = $('todayList'); tl.textContent = '';
     todays.forEach(function (t) { tl.appendChild(datedRow(t, today)); });
     showLate('lateLabel', 'lateList');
+    if (document.activeElement !== $('dayNote')) $('dayNote').value = db.notes[today] || '';
   }
 
   function renderWeek() {
@@ -1325,18 +1343,67 @@
     });
   }
 
+  function renderJournal() {
+    $('title').textContent = 'יומן';
+    var days = Object.keys(db.notes).sort().reverse();
+    setSub([
+      { text: 'משפט אחד לכל יום' },
+      { strong: true, text: days.length === 0 ? 'עוד לא נכתב' : days.length === 1 ? 'יום אחד נרשם' : days.length + ' ימים נרשמו' }
+    ]);
+    var box = $('journalList'); box.textContent = '';
+    box.hidden = days.length === 0; $('journalEmpty').hidden = days.length > 0;
+    days.forEach(function (day) {
+      var d = fromIso(day), key = 'note:' + day, stop = el('section', 'stop' + (day === today ? ' today' : ''));
+      stop.appendChild(el('div', 'stump', d.getDate()));
+      var body = el('div'), h = el('h2');
+      h.appendChild(document.createTextNode(day === today ? 'היום' : day === shift(today, -1) ? 'אתמול' : 'יום ' + wd(day)));
+      h.appendChild(el('small', '', d.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' })));
+      body.appendChild(h);
+      if (editing === key) {
+        var form = el('form', 'edit');
+        var ta = el('textarea', 'fill'); ta.rows = 3; ta.maxLength = 240; ta.value = db.notes[day]; ta.id = 'edit-' + day; ta.setAttribute('aria-label', 'המשפט של היום הזה');
+        var ok = el('button', 'plant', 'שמור'); ok.type = 'submit'; ok.style.height = '42px';
+        var del = el('button', 'ghost warn', 'מחק'); del.type = 'button';
+        var cancel = el('button', 'ghost bare', 'ביטול'); cancel.type = 'button';
+        form.onsubmit = function (e) {
+          e.preventDefault();
+          var v = ta.value.trim();
+          if (v) { db.notes[day] = v; save(); }
+          editing = null; render();
+        };
+        del.onclick = function () {
+          var old = db.notes[day]; delete db.notes[day]; editing = null;
+          showToast(function () { db.notes[day] = old; });
+          save(); render();
+        };
+        cancel.onclick = function () { editing = null; render(); };
+        [ta, ok, del, cancel].forEach(function (x) { form.appendChild(x); });
+        body.appendChild(form);
+      } else {
+        var txt = el('button', 'txt'); txt.type = 'button'; txt.setAttribute('aria-label', 'ערוך את המשפט');
+        txt.appendChild(el('span', 't', db.notes[day]));
+        txt.onclick = function () { editing = key; render(); };
+        body.appendChild(txt);
+      }
+      stop.appendChild(body);
+      box.appendChild(stop);
+    });
+  }
+
   function render() {
     $('viewDaily').hidden = view !== 'daily';
     $('viewWeek').hidden = view !== 'week';
     $('viewBdays').hidden = view !== 'bdays';
+    $('viewJournal').hidden = view !== 'journal';
     $('tabDaily').setAttribute('aria-selected', String(view === 'daily'));
     $('tabWeek').setAttribute('aria-selected', String(view === 'week'));
     $('tabBdays').setAttribute('aria-selected', String(view === 'bdays'));
-    if (view === 'daily') renderDaily(); else if (view === 'week') renderWeek(); else renderBdays();
+    $('tabJournal').setAttribute('aria-selected', String(view === 'journal'));
+    if (view === 'daily') renderDaily(); else if (view === 'week') renderWeek(); else if (view === 'bdays') renderBdays(); else renderJournal();
     syncScene();
     justId = null;
 
-    var hasData = db.routine.length || db.bdays.length || Object.keys(db.dated).length;
+    var hasData = db.routine.length || db.bdays.length || Object.keys(db.dated).length || Object.keys(db.notes).length;
     var quietDays = daysBetween(today, db.lastBackup || db.since || today);
     $('bkNudge').hidden = !(hasData && quietDays >= 30);
     $('bkNudge').textContent = db.lastBackup ? 'עבר חודש מאז הגיבוי האחרון. כדאי להעתיק גיבוי חדש.' : 'עוד לא גיבית את הנתונים, והם שמורים רק במכשיר הזה. כדאי להעתיק גיבוי.';
@@ -1344,7 +1411,8 @@
     $('calmBtn').setAttribute('aria-pressed', String(!!db.calm));
 
     var warn = 'הדפדפן הזה חוסם שמירה, ולכן המשימות יימחקו ביציאה. נסה לפתוח בדפדפן רגיל, לא במצב פרטי.';
-    $('footDaily').className = $('footWeek').className = $('footBdays').className = 'foot' + (storageOK ? '' : ' warn');
+    $('footDaily').className = $('footWeek').className = $('footBdays').className = $('footJournal').className = 'foot' + (storageOK ? '' : ' warn');
+    $('footJournal').textContent = storageOK ? 'לחיצה על משפט פותחת עריכה ומחיקה. היומן נשמר רק במכשיר הזה, ונכלל בגיבוי.' : warn;
     $('footBdays').textContent = storageOK ? 'כל יום הולדת הוא פרח באחו, והוא נפתח בשבוע שלפני. הרשימה נשמרת רק במכשיר הזה.' : warn;
     $('footDaily').textContent = storageOK ? 'עלה ירוק = עשיתי, עלה נושר = לא היום. כל בוקר היער מתחיל מחדש מנבטים, עם המשימות של אותו יום. לחיצה על משימה פותחת עריכה.' : warn;
     $('footWeek').textContent = storageOK ? 'מה שמגיע היום פורח גם בעמוד היער. הכול נשמר אוטומטית במכשיר הזה.' : warn;
@@ -1352,13 +1420,22 @@
 
   function go(v) {
     view = v; editing = null;
-    try { history.replaceState(null, '', v === 'week' ? '#week' : v === 'bdays' ? '#birthdays' : '#daily'); } catch (e) {}
+    try { history.replaceState(null, '', v === 'week' ? '#week' : v === 'bdays' ? '#birthdays' : v === 'journal' ? '#journal' : '#daily'); } catch (e) {}
     render();
     window.scrollTo(0, 0);
   }
   $('tabDaily').onclick = function () { go('daily'); };
   $('tabWeek').onclick = function () { go('week'); };
   $('tabBdays').onclick = function () { go('bdays'); };
+  $('tabJournal').onclick = function () { go('journal'); };
+
+  // The day's sentence saves itself as it is typed.
+  $('dayNote').addEventListener('input', function () {
+    var v = this.value.trim();
+    if (v) db.notes[today] = v; else delete db.notes[today];
+    save();
+    $('noteMsg').textContent = !storageOK ? '' : v ? 'נשמר ביומן.' : '';
+  });
 
   function applyCalm() {
     still = reduceMotion || !!db.calm;
@@ -1380,6 +1457,7 @@
     try { d = JSON.parse($('bkText').value); } catch (e) {}
     if (!d || !Array.isArray(d.routine) || !d.marks || !d.dated) { msg.textContent = 'זה לא טקסט גיבוי תקין. הדבק את הגיבוי המלא ונסה שוב.'; return; }
     if (!Array.isArray(d.bdays)) d.bdays = [];
+    if (!d.notes || typeof d.notes !== 'object') d.notes = {};
     db = d; trees = {}; flowers = {}; editing = null; firstSync = true;
     if (!db.since) db.since = today;
     save(); applyCalm(); render();
