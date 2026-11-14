@@ -148,6 +148,12 @@
   .edit { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 0 10px; }
   .edit .fill { flex: 1 1 100%; }
 
+  :root.calm *, :root.calm *::before, :root.calm *::after { animation: none !important; }
+  .addline.week input[type="date"], .edit input[type="date"] { flex: 1 1 100%; font-size: 16px; }
+  .addline.bd #bdYear { flex: 1 1 96px; font-size: 16px; }
+  .edit .ghost.move { width: 44px; padding: 0; font-size: 18px; }
+  .txt .note { font-size: 13px; color: var(--leaf); }
+  #bkNudge { color: var(--autumn); font-weight: 600; }
   .when { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
   .when select { flex: 0 1 auto; font-size: 16px; height: 44px; }
   .when .days { display: flex; gap: 5px; flex-wrap: wrap; }
@@ -159,8 +165,8 @@
   .import[open] { display: flex; flex-direction: column; gap: 10px; }
   textarea.fill { width: 100%; height: auto; padding: 10px 12px; font-size: 16px; line-height: 1.5; border: 1.5px solid var(--on-ground-soft); border-radius: 12px; resize: vertical; }
   .stop.soon .stump { box-shadow: inset 0 0 0 3px var(--wood), inset 0 0 0 4.5px var(--wood-ring), inset 0 0 0 9px var(--wood), inset 0 0 0 10.5px var(--wood-ring), 0 0 0 4px var(--ground), 0 0 0 6.5px var(--accent); }
-  .stop .txt { padding-block: 2px; min-height: 46px; }
-  .stop .txt .t { font-weight: 700; font-size: 19px; }
+  #bdayList .txt { padding-block: 2px; min-height: 46px; }
+  #bdayList .txt .t { font-weight: 700; font-size: 19px; }
   .floor #backupBox { padding-block: 0 44px; margin-top: -40px; }
   .quiet { margin: 0; color: var(--on-ground-soft); }
   .label { margin: 0 0 -14px; font-size: 14px; font-weight: 600; color: var(--on-ground-soft); }
@@ -231,6 +237,8 @@
       </details>
       <p class="label" id="todayLabel" hidden>על השביל היום</p>
       <ul class="rows" id="todayList" hidden></ul>
+      <p class="label" id="lateLabel" hidden>נשאר מימים קודמים</p>
+      <ul class="rows" id="lateList" hidden></ul>
       <p class="foot" id="footDaily"></p>
     </section>
 
@@ -241,8 +249,13 @@
         <select class="fill" id="datedDay" aria-label="באיזה יום"></select>
         <input class="fill" id="datedTime" type="time" aria-label="שעה, לא חובה">
         <button class="plant" type="submit">הוסף</button>
+        <input class="fill" id="datedDate" type="date" aria-label="תאריך" hidden>
       </form>
+      <p class="label" id="lateLabelW" hidden>נשאר מימים קודמים</p>
+      <ul class="rows" id="lateListW" hidden></ul>
       <div class="trail" id="days"></div>
+      <p class="label" id="laterLabel" hidden>בהמשך הדרך</p>
+      <div class="trail" id="later" hidden></div>
       <p class="foot" id="footWeek"></p>
     </section>
 
@@ -252,13 +265,14 @@
         <input class="fill" id="bdName" type="text" placeholder="של מי יום ההולדת?" aria-label="שם" maxlength="60" enterkeyhint="done">
         <select class="fill" id="bdDay" aria-label="יום בחודש"></select>
         <select class="fill" id="bdMonth" aria-label="חודש"></select>
+        <input class="fill" id="bdYear" type="number" inputmode="numeric" min="1900" max="2100" placeholder="שנת לידה" aria-label="שנת לידה, לא חובה">
         <button class="plant" type="submit">הוסף</button>
       </form>
       <div class="trail" id="bdayList"></div>
       <p class="quiet" id="bdayEmpty" hidden>עוד אין כאן ימי הולדת. הוסף אחד למעלה, או הדבק רשימה שלמה למטה.</p>
       <details class="import">
         <summary>הדבקת רשימה שלמה</summary>
-        <p class="quiet">שורה לכל אדם, שם ותאריך. למשל: דנה, 5.7</p>
+        <p class="quiet">שורה לכל אדם, שם ותאריך. אפשר להוסיף שנת לידה. למשל: דנה, 5.7.1995</p>
         <textarea class="fill" id="bdPaste" rows="5" aria-label="רשימת ימי הולדת"></textarea>
         <div class="addline"><button class="plant" type="button" id="bdImport">הוסף את הרשימה</button><span class="quiet" id="bdMsg" aria-live="polite"></span></div>
       </details>
@@ -266,7 +280,9 @@
     </section>
 
     <section class="gutter" id="backupBox">
-      <details class="import">
+      <p class="quiet" id="bkNudge" hidden></p>
+      <div class="addline"><button class="ghost" type="button" id="calmBtn"></button></div>
+      <details class="import" id="bkDetails">
         <summary>גיבוי ושחזור</summary>
         <p class="quiet">הגיבוי הוא טקסט שמכיל את כל המשימות וימי ההולדת. העתק אותו ושמור במקום בטוח, למשל בפתקים.</p>
         <div class="addline"><button class="plant" type="button" id="bkCopy">העתק גיבוי</button><span class="quiet" id="bkMsg" aria-live="polite"></span></div>
@@ -474,7 +490,8 @@
   var W = 0, H = 0, DPR = 1, M = 40, sky = null, layers = [], fogTex = null, cloudTex = null, glow = null, glowFor = '';
   var trees = {}, order = [], flowers = {}, florder = [], sparks = [], motes = [], blades = [], stars = [], trail = [], drift = [], clouds = [], flies = [];
   var firstSync = true, running = false, lastT = 0, nextDrift = 4, lowQ = false, slow = 0, lastReal = 0;
-  var still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  var still = reduceMotion || !!db.calm; // no motion: the system asked for less, or the calm switch is on
 
   function invalidateScene() { sky = null; glow = null; if (still) requestAnimationFrame(frame); }
   function groundY(x) { return H * 0.8 + Math.sin(x / W * 3.3 + 0.8) * H * 0.012; }
@@ -1007,16 +1024,23 @@
       var ok = el('button', 'plant', 'שמור'); ok.type = 'submit'; ok.style.height = '42px';
       var del = el('button', 'ghost warn', 'עקור'); del.type = 'button'; del.setAttribute('aria-label', 'מחק את המשימה');
       var cancel = el('button', 'ghost bare', 'ביטול'); cancel.type = 'button';
-      var when = o.onSched ? schedControls(o.sched) : null;
+      var when = o.onSched ? schedControls(o.sched) : null, date = null;
+      if (o.onMove) { date = el('input', 'fill'); date.type = 'date'; date.value = o.day; date.min = today; date.setAttribute('aria-label', 'העבר לתאריך'); }
       form.onsubmit = function (e) {
         e.preventDefault();
         var v = inp.value.trim();
-        if (v) { o.onText(v); if (when) o.onSched(when.read()); save(); }
+        if (v) { o.onText(v); if (when) o.onSched(when.read()); if (date && date.value && date.value !== o.day && date.value >= today) o.onMove(date.value); save(); }
         editing = null; render();
       };
       del.onclick = function () { editing = null; showToast(o.onDelete()); save(); render(); };
       cancel.onclick = function () { editing = null; render(); };
-      form.appendChild(inp); if (when) form.appendChild(when.node); form.appendChild(ok); form.appendChild(del); form.appendChild(cancel);
+      form.appendChild(inp); if (when) form.appendChild(when.node); if (date) form.appendChild(date);
+      form.appendChild(ok); form.appendChild(del); form.appendChild(cancel);
+      if (o.onShift) [[-1, '↑', 'הזז למעלה'], [1, '↓', 'הזז למטה']].forEach(function (m) {
+        var b = el('button', 'ghost move', m[1]); b.type = 'button'; b.setAttribute('aria-label', m[2]);
+        b.onclick = function () { o.onShift(m[0]); save(); render(); };
+        form.appendChild(b);
+      });
       li.appendChild(form);
       setTimeout(function () { inp.focus(); }, 0);
       return li;
@@ -1047,9 +1071,17 @@
     return li;
   }
 
-  function routineRow(t, plain) {
+  // key: set when the same task is listed more than once on a page (the week view), so only one copy opens for editing.
+  function routineRow(t, plain, key) {
     return row({
-      id: t.id, text: t.text, state: plain ? 'open' : routineState(t.id), tag: schedText(t), plain: plain,
+      id: key || t.id, text: t.text, state: plain ? 'open' : routineState(t.id), tag: (key ? 'קבועה · ' : '') + schedText(t), plain: plain,
+      onShift: key ? null : function (dir) { // swap with the neighbour in the list it is shown in
+        var due = dueToday(), group = due.indexOf(t) >= 0 ? due : db.routine.filter(function (x) { return due.indexOf(x) < 0; });
+        var other = group[group.indexOf(t) + dir];
+        if (!other) return;
+        var a = db.routine.indexOf(t), b = db.routine.indexOf(other);
+        db.routine[a] = other; db.routine[b] = t;
+      },
       sched: t.sched || null,
       onSched: function (s) { if (s) t.sched = s; else delete t.sched; },
       onState: function (s) { setRoutineState(t.id, s); },
@@ -1061,9 +1093,15 @@
       }
     });
   }
-  function datedRow(t, day) {
+  function datedRow(t, day, late) {
     return row({
-      id: t.id, text: t.text, state: t.state || 'open', tag: t.time || '',
+      id: t.id, text: t.text, state: t.state || 'open', tag: (late ? dayMonth(day) + (t.time ? ' · ' : '') : '') + (t.time || ''),
+      day: day,
+      onMove: function (to) {
+        var arr = db.dated[day]; arr.splice(arr.indexOf(t), 1);
+        if (!arr.length) delete db.dated[day];
+        (db.dated[to] || (db.dated[to] = [])).push(t);
+      },
       onState: function (s) { t.state = s; },
       onText: function (v) { t.text = v; },
       onDelete: function () {
@@ -1077,6 +1115,22 @@
       }
     });
   }
+
+  // Dated tasks whose day passed without being marked either way.
+  function overdue() {
+    var out = [], from = shift(today, -30);
+    Object.keys(db.dated).sort().forEach(function (day) {
+      if (day >= today || day < from) return;
+      datedOf(day).forEach(function (t) { if ((t.state || 'open') === 'open') out.push({ t: t, day: day }); });
+    });
+    return out;
+  }
+  function showLate(labelId, listId) {
+    var late = overdue(), ul = $(listId); ul.textContent = '';
+    $(labelId).hidden = ul.hidden = late.length === 0;
+    late.forEach(function (it) { ul.appendChild(datedRow(it.t, it.day, true)); });
+  }
+  function daysBetween(a, b) { return Math.round((fromIso(a) - fromIso(b)) / 864e5); }
 
   /* ---------- pages ---------- */
 
@@ -1110,6 +1164,7 @@
     $('todayLabel').hidden = $('todayList').hidden = todays.length === 0;
     var tl = $('todayList'); tl.textContent = '';
     todays.forEach(function (t) { tl.appendChild(datedRow(t, today)); });
+    showLate('lateLabel', 'lateList');
   }
 
   function renderWeek() {
@@ -1129,28 +1184,48 @@
       opt.value = day;
       sel.appendChild(opt);
     }
-    if (chosen >= today && chosen <= shift(today, 6)) sel.value = chosen;
+    var far = el('option', '', 'תאריך אחר…'); far.value = 'other'; sel.appendChild(far);
+    if (chosen === 'other' || (chosen >= today && chosen <= shift(today, 6))) sel.value = chosen;
+    $('datedDate').min = today; $('datedDate').hidden = sel.value !== 'other';
+    showLate('lateLabelW', 'lateListW');
 
     var days = $('days'); days.textContent = '';
     for (var j = 0; j < 7; j++) {
       (function (day, n) {
-        var tasks = datedOf(day);
-        var stop = el('section', 'stop' + (n === 0 ? ' today' : '') + (tasks.length ? '' : ' free'));
+        var tasks = datedOf(day), fixed = db.routine.filter(function (t) { return schedText(t) && isDue(t, day); });
+        var stop = el('section', 'stop' + (n === 0 ? ' today' : '') + (tasks.length + fixed.length ? '' : ' free'));
         stop.appendChild(el('div', 'stump', fromIso(day).getDate()));
         var body = el('div');
         var h = el('h2');
         h.appendChild(document.createTextNode(n === 0 ? 'היום' : n === 1 ? 'מחר' : 'יום ' + wd(day)));
-        h.appendChild(el('small', '', (n < 2 ? 'יום ' + wd(day) + ' · ' : '') + (tasks.length ? dayMonth(day) : 'שביל פתוח')));
+        h.appendChild(el('small', '', (n < 2 ? 'יום ' + wd(day) + ' · ' : '') + (tasks.length + fixed.length ? dayMonth(day) : 'שביל פתוח')));
         body.appendChild(h);
-        if (tasks.length) {
+        if (tasks.length + fixed.length) {
           var ul = el('ul', 'rows');
           tasks.forEach(function (t) { ul.appendChild(datedRow(t, day)); });
+          fixed.forEach(function (t) { ul.appendChild(routineRow(t, true, t.id + '@' + day)); });
           body.appendChild(ul);
         }
         stop.appendChild(body);
         days.appendChild(stop);
       })(shift(today, j), j);
     }
+
+    var later = $('later'), edge = shift(today, 6), thisYear = fromIso(today).getFullYear(); // anything planned beyond the week
+    later.textContent = '';
+    var farDays = Object.keys(db.dated).filter(function (d) { return d > edge; }).sort();
+    $('laterLabel').hidden = later.hidden = farDays.length === 0;
+    farDays.forEach(function (day) {
+      var d = fromIso(day), stop = el('section', 'stop');
+      stop.appendChild(el('div', 'stump', d.getDate()));
+      var body = el('div'), h = el('h2');
+      h.appendChild(document.createTextNode('יום ' + wd(day)));
+      h.appendChild(el('small', '', dayMonth(day) + (d.getFullYear() !== thisYear ? ' ' + d.getFullYear() : '') + ' · בעוד ' + daysBetween(day, today) + ' ימים'));
+      body.appendChild(h);
+      var ul = el('ul', 'rows');
+      datedOf(day).forEach(function (t) { ul.appendChild(datedRow(t, day)); });
+      body.appendChild(ul); stop.appendChild(body); later.appendChild(stop);
+    });
   }
 
   var MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
@@ -1171,20 +1246,22 @@
   function parseBdays(text) {
     var out = [];
     text.split(/\n+/).forEach(function (line) {
-      var m = line.match(/(\d{1,2})\s*[.\/\-]\s*(\d{1,2})(?:\s*[.\/\-]\s*\d{2,4})?/);
+      var m = line.match(/(\d{1,2})\s*[.\/\-]\s*(\d{1,2})(?:\s*[.\/\-]\s*(\d{2,4}))?/);
       if (!m) return;
       var d = +m[1], mo = +m[2];
       if (mo < 1 || mo > 12 || d < 1 || d > 31) return;
       var name = line.replace(m[0], ' ').replace(/[,;:|\t]+/g, ' ').replace(/\s+/g, ' ').replace(/^[\s\-–—.]+|[\s\-–—.]+$/g, '');
-      if (name) out.push({ name: name.slice(0, 60), d: d, m: mo });
+      if (name) out.push({ name: name.slice(0, 60), d: d, m: mo, y: validYear(m[3]) });
     });
     return out;
   }
+  function validYear(v) { var y = parseInt(v, 10); return y >= 1900 && y <= fromIso(today).getFullYear() ? y : 0; }
   function addBdays(list) {
     var added = 0;
     list.forEach(function (b) {
       if (db.bdays.some(function (x) { return x.name === b.name && x.d === b.d && x.m === b.m; })) return;
-      db.bdays.push({ id: uid(), name: b.name, d: b.d, m: b.m }); added++;
+      var rec = { id: uid(), name: b.name, d: b.d, m: b.m }; if (b.y) rec.y = b.y;
+      db.bdays.push(rec); added++;
     });
     return added;
   }
@@ -1210,13 +1287,21 @@
         var sd = el('select', 'fill'), sm = el('select', 'fill');
         sd.setAttribute('aria-label', 'יום בחודש'); sm.setAttribute('aria-label', 'חודש'); sd.style.flex = sm.style.flex = '1 1 84px';
         fillSelect(sd, dayItems(), b.d); fillSelect(sm, monthItems(), b.m);
+        var yr = el('input', 'fill'); yr.type = 'number'; yr.inputMode = 'numeric'; yr.min = 1900; yr.max = 2100; yr.placeholder = 'שנת לידה'; yr.value = b.y || ''; yr.style.flex = '1 1 96px'; yr.style.fontSize = '16px'; yr.setAttribute('aria-label', 'שנת לידה, לא חובה');
+        var note = el('input', 'fill'); note.type = 'text'; note.maxLength = 120; note.placeholder = 'רעיון למתנה או הערה'; note.value = b.note || ''; note.setAttribute('aria-label', 'רעיון למתנה או הערה');
         var ok = el('button', 'plant', 'שמור'); ok.type = 'submit'; ok.style.height = '42px';
         var del = el('button', 'ghost warn', 'מחק'); del.type = 'button';
         var cancel = el('button', 'ghost bare', 'ביטול'); cancel.type = 'button';
         form.onsubmit = function (e) {
           e.preventDefault();
           var v = name.value.trim();
-          if (v) { b.name = v; b.d = +sd.value; b.m = +sm.value; save(); }
+          if (v) {
+            b.name = v; b.d = +sd.value; b.m = +sm.value;
+            var y = validYear(yr.value), nt = note.value.trim();
+            if (y) b.y = y; else delete b.y;
+            if (nt) b.note = nt; else delete b.note;
+            save();
+          }
           editing = null; render();
         };
         del.onclick = function () {
@@ -1225,12 +1310,14 @@
           save(); render();
         };
         cancel.onclick = function () { editing = null; render(); };
-        [name, sd, sm, ok, del, cancel].forEach(function (x) { form.appendChild(x); });
+        [name, sd, sm, yr, note, ok, del, cancel].forEach(function (x) { form.appendChild(x); });
         stop.appendChild(form);
       } else {
         var txt = el('button', 'txt'); txt.type = 'button'; txt.setAttribute('aria-label', 'ערוך: ' + b.name);
         txt.appendChild(el('span', 't', b.name));
-        txt.appendChild(el('span', 'tag', b.d + ' ב' + MONTHS[b.m - 1] + ' · יום ' + WEEKDAYS[n.date.getDay()] + ' · ' + inWords(n.days)));
+        var age = b.y ? n.date.getFullYear() - b.y : 0;
+        txt.appendChild(el('span', 'tag', b.d + ' ב' + MONTHS[b.m - 1] + ' · יום ' + WEEKDAYS[n.date.getDay()] + ' · ' + inWords(n.days) + (age > 0 ? ' · גיל ' + age : '')));
+        if (b.note) txt.appendChild(el('span', 'note', b.note));
         txt.onclick = function () { editing = b.id; render(); };
         stop.appendChild(txt);
       }
@@ -1249,6 +1336,13 @@
     syncScene();
     justId = null;
 
+    var hasData = db.routine.length || db.bdays.length || Object.keys(db.dated).length;
+    var quietDays = daysBetween(today, db.lastBackup || db.since || today);
+    $('bkNudge').hidden = !(hasData && quietDays >= 30);
+    $('bkNudge').textContent = db.lastBackup ? 'עבר חודש מאז הגיבוי האחרון. כדאי להעתיק גיבוי חדש.' : 'עוד לא גיבית את הנתונים, והם שמורים רק במכשיר הזה. כדאי להעתיק גיבוי.';
+    $('calmBtn').textContent = db.calm ? 'הפעל את התנועה ביער' : 'עצור את התנועה ביער';
+    $('calmBtn').setAttribute('aria-pressed', String(!!db.calm));
+
     var warn = 'הדפדפן הזה חוסם שמירה, ולכן המשימות יימחקו ביציאה. נסה לפתוח בדפדפן רגיל, לא במצב פרטי.';
     $('footDaily').className = $('footWeek').className = $('footBdays').className = 'foot' + (storageOK ? '' : ' warn');
     $('footBdays').textContent = storageOK ? 'כל יום הולדת הוא פרח באחו, והוא נפתח בשבוע שלפני. הרשימה נשמרת רק במכשיר הזה.' : warn;
@@ -1266,7 +1360,15 @@
   $('tabWeek').onclick = function () { go('week'); };
   $('tabBdays').onclick = function () { go('bdays'); };
 
+  function applyCalm() {
+    still = reduceMotion || !!db.calm;
+    document.documentElement.classList.toggle('calm', !!db.calm);
+    invalidateScene(); wake();
+  }
+  $('calmBtn').onclick = function () { db.calm = !db.calm; save(); applyCalm(); render(); };
+
   $('bkCopy').onclick = function () {
+    db.lastBackup = today; save(); $('bkNudge').hidden = true;
     var text = JSON.stringify(db), box = $('bkText'), msg = $('bkMsg');
     box.value = text;
     function manual() { box.focus(); box.select(); msg.textContent = 'סמן והעתק את הטקסט שלמטה.'; }
@@ -1279,7 +1381,8 @@
     if (!d || !Array.isArray(d.routine) || !d.marks || !d.dated) { msg.textContent = 'זה לא טקסט גיבוי תקין. הדבק את הגיבוי המלא ונסה שוב.'; return; }
     if (!Array.isArray(d.bdays)) d.bdays = [];
     db = d; trees = {}; flowers = {}; editing = null; firstSync = true;
-    save(); render();
+    if (!db.since) db.since = today;
+    save(); applyCalm(); render();
     $('bkText').value = ''; msg.textContent = 'השחזור הושלם.';
   };
 
@@ -1287,8 +1390,8 @@
     e.preventDefault();
     var inp = $('bdName'), v = inp.value.trim();
     if (!v) { inp.focus(); return; }
-    addBdays([{ name: v, d: +$('bdDay').value, m: +$('bdMonth').value }]);
-    inp.value = ''; save(); render();
+    addBdays([{ name: v, d: +$('bdDay').value, m: +$('bdMonth').value, y: validYear($('bdYear').value) }]);
+    inp.value = ''; $('bdYear').value = ''; save(); render();
   });
   $('bdImport').onclick = function () {
     var found = parseBdays($('bdPaste').value), added = addBdays(found);
@@ -1311,11 +1414,14 @@
     inp.value = ''; save(); render(); inp.focus();
   });
 
+  $('datedDay').addEventListener('change', function () { $('datedDate').hidden = this.value !== 'other'; });
+
   $('addDated').addEventListener('submit', function (e) {
     e.preventDefault();
     var inp = $('newDated'), v = inp.value.trim();
     if (!v) { inp.focus(); return; }
     var day = $('datedDay').value || today;
+    if (day === 'other') { day = $('datedDate').value; if (!day || day < today) { $('datedDate').focus(); return; } }
     (db.dated[day] || (db.dated[day] = [])).push({ id: uid(), text: v, time: $('datedTime').value || '', state: 'open' });
     inp.value = ''; $('datedTime').value = '';
     save(); render(); inp.focus();
@@ -1333,6 +1439,8 @@
   if (darkQuery && darkQuery.addEventListener) darkQuery.addEventListener('change', setPhase);
   if (window.MutationObserver) new MutationObserver(setPhase).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
+  if (!db.since) { db.since = today; save(); }
+  document.documentElement.classList.toggle('calm', !!db.calm);
   setPhase();
   render();
 })();
