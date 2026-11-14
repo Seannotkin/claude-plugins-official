@@ -148,6 +148,11 @@
   .edit { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 0 10px; }
   .edit .fill { flex: 1 1 100%; }
 
+  .when { flex: 1 1 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .when select { flex: 0 1 auto; font-size: 16px; height: 44px; }
+  .when .days { display: flex; gap: 5px; flex-wrap: wrap; }
+  .daychip { width: 40px; height: 40px; border-radius: 50%; background: none; border: 1.5px solid var(--on-ground-soft); font-weight: 700; padding: 0; }
+  .daychip[aria-pressed="true"] { background: var(--leaf); border-color: var(--leaf); color: var(--ground); }
   .addline.bd #bdName { flex-basis: 100%; }
   .addline.bd select { flex: 1 1 84px; }
   .import summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: var(--on-ground-soft); font-weight: 600; }
@@ -216,9 +221,14 @@
       <ul class="rows" id="routineList"></ul>
       <p class="quiet" id="routineEmpty" hidden>היער עוד ריק. שתול כאן משימה שחוזרת כל יום, והיא תנבוט מחדש בכל בוקר.</p>
       <form class="addline" id="addRoutine" autocomplete="off">
-        <input class="fill" id="newRoutine" type="text" placeholder="משימה לכל יום…" aria-label="משימה חדשה לכל יום" maxlength="200" enterkeyhint="done">
+        <input class="fill" id="newRoutine" type="text" placeholder="משימה קבועה…" aria-label="משימה קבועה חדשה" maxlength="200" enterkeyhint="done">
         <button class="plant" type="submit">שתול</button>
+        <div class="when" id="rtOpts"></div>
       </form>
+      <details class="import" id="otherBox" hidden>
+        <summary id="otherSum"></summary>
+        <ul class="rows" id="otherList"></ul>
+      </details>
       <p class="label" id="todayLabel" hidden>על השביל היום</p>
       <ul class="rows" id="todayList" hidden></ul>
       <p class="foot" id="footDaily"></p>
@@ -354,6 +364,55 @@
   }
   var LEAF = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20C4 10 10 4 20 4c0 10-6 16-16 16Z"/><path class="rib" d="M4 20l9.5-9.5"/></svg>';
   var FALL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17c-1-7 3-12 12-13 1 9-4 14-12 13Z"/><path class="rib" d="M5 17l7-7"/><path d="M14 21h6M17 18.5h4"/></svg>';
+
+  // A routine task repeats every day unless it carries a schedule:
+  // {type: 'week', days: [0..6]} for fixed weekdays, or {type: 'month', day: 1..31}.
+  function isDue(t, day) {
+    var s = t.sched, d = fromIso(day);
+    if (!s || s.type === 'daily') return true;
+    if (s.type === 'week') return s.days.indexOf(d.getDay()) >= 0;
+    if (s.type === 'month') return d.getDate() === Math.min(s.day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()); // the 31st falls on the last day of a shorter month
+    return true;
+  }
+  function dueToday() { return db.routine.filter(function (t) { return isDue(t, today); }); }
+  function schedText(t) {
+    var s = t.sched;
+    if (!s || s.type === 'daily' || (s.type === 'week' && s.days.length === 7)) return '';
+    if (s.type === 'week') return 'ימי ' + s.days.slice().sort().map(function (i) { return WEEKDAYS[i]; }).join(', ');
+    return 'ב-' + s.day + ' בכל חודש';
+  }
+  // The "when" controls, shared by the add form and the edit form.
+  function schedControls(init) {
+    var node = el('div', 'when'), type = el('select', 'fill'), days = el('div', 'days'), mday = el('select', 'fill');
+    type.setAttribute('aria-label', 'מתי המשימה חוזרת'); mday.setAttribute('aria-label', 'יום בחודש');
+    [['daily', 'כל יום'], ['week', 'ימים קבועים בשבוע'], ['month', 'פעם בחודש']].forEach(function (o) { var op = el('option', '', o[1]); op.value = o[0]; type.appendChild(op); });
+    ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'].forEach(function (name, i) {
+      var b = el('button', 'daychip', name); b.type = 'button'; b.setAttribute('aria-label', 'יום ' + WEEKDAYS[i]);
+      b.setAttribute('aria-pressed', String(!!(init && init.type === 'week' && init.days.indexOf(i) >= 0)));
+      b.onclick = function () { b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true')); };
+      days.appendChild(b);
+    });
+    for (var i = 1; i <= 31; i++) { var o = el('option', '', 'ב-' + i + ' בחודש'); o.value = i; mday.appendChild(o); }
+    type.value = init ? init.type : 'daily';
+    mday.value = init && init.type === 'month' ? init.day : fromIso(today).getDate();
+    function show() { days.hidden = type.value !== 'week'; mday.hidden = type.value !== 'month'; }
+    type.onchange = show; show();
+    node.appendChild(type); node.appendChild(days); node.appendChild(mday);
+    return {
+      node: node,
+      read: function () {
+        if (type.value === 'month') return { type: 'month', day: +mday.value };
+        if (type.value === 'week') {
+          var picked = [];
+          Array.prototype.forEach.call(days.children, function (b, i) { if (b.getAttribute('aria-pressed') === 'true') picked.push(i); });
+          if (!picked.length) picked = [fromIso(today).getDay()]; // nothing chosen: assume the same weekday as today
+          return picked.length === 7 ? null : { type: 'week', days: picked };
+        }
+        return null;
+      },
+      reset: function () { type.value = 'daily'; Array.prototype.forEach.call(days.children, function (b) { b.setAttribute('aria-pressed', 'false'); }); show(); }
+    };
+  }
 
   function routineState(id) { return (db.marks[today] || {})[id] || 'open'; }
   function setRoutineState(id, s) {
@@ -871,11 +930,11 @@
   function syncScene() {
     $('scene').classList.toggle('short', view !== 'daily');
     fit(); sky = null;
-    var n = db.routine.length, D = n <= 4 ? 4 : 3;
+    var dueNow = dueToday(), n = dueNow.length, D = n <= 4 ? 4 : 3;
     order = [];
     if (view === 'daily') {
       var two = n > 8, back = two ? Math.ceil(n / 2) : 0;
-      db.routine.forEach(function (task, i) {
+      dueNow.forEach(function (task, i) {
         var T = trees[task.id], st = routineState(task.id), isBack = two && i < back, isNew = false;
         if (!T || T.D !== D) { var old = T; T = trees[task.id] = makeTree(task.id, D); if (old) { T.u = old.u / (old.D + 1.6) * (D + 1.6); T.f = old.f; T.state = old.state; } else isNew = true; }
         var count = two ? (isBack ? back : n - back) : n, col = two ? (isBack ? i : i - back) : i, h = hash(task.id);
@@ -948,15 +1007,16 @@
       var ok = el('button', 'plant', 'שמור'); ok.type = 'submit'; ok.style.height = '42px';
       var del = el('button', 'ghost warn', 'עקור'); del.type = 'button'; del.setAttribute('aria-label', 'מחק את המשימה');
       var cancel = el('button', 'ghost bare', 'ביטול'); cancel.type = 'button';
+      var when = o.onSched ? schedControls(o.sched) : null;
       form.onsubmit = function (e) {
         e.preventDefault();
         var v = inp.value.trim();
-        if (v) { o.onText(v); save(); }
+        if (v) { o.onText(v); if (when) o.onSched(when.read()); save(); }
         editing = null; render();
       };
       del.onclick = function () { editing = null; showToast(o.onDelete()); save(); render(); };
       cancel.onclick = function () { editing = null; render(); };
-      form.appendChild(inp); form.appendChild(ok); form.appendChild(del); form.appendChild(cancel);
+      form.appendChild(inp); if (when) form.appendChild(when.node); form.appendChild(ok); form.appendChild(del); form.appendChild(cancel);
       li.appendChild(form);
       setTimeout(function () { inp.focus(); }, 0);
       return li;
@@ -981,14 +1041,17 @@
     fall.setAttribute('aria-label', 'לא עשיתי'); fall.setAttribute('aria-pressed', String(o.state === 'missed'));
     fall.onclick = function () { mark('missed'); };
 
+    if (o.plain) { li.appendChild(txt); return li; }
     li.appendChild(leaf); li.appendChild(txt); li.appendChild(fall);
     if (justId === o.id) li.classList.add(justKind);
     return li;
   }
 
-  function routineRow(t) {
+  function routineRow(t, plain) {
     return row({
-      id: t.id, text: t.text, state: routineState(t.id), tag: '',
+      id: t.id, text: t.text, state: plain ? 'open' : routineState(t.id), tag: schedText(t), plain: plain,
+      sched: t.sched || null,
+      onSched: function (s) { if (s) t.sched = s; else delete t.sched; },
       onState: function (s) { setRoutineState(t.id, s); },
       onText: function (v) { t.text = v; },
       onDelete: function () {
@@ -1024,17 +1087,24 @@
 
   function renderDaily() {
     $('title').textContent = wd(today);
-    var states = db.routine.map(function (t) { return routineState(t.id); });
+    var due = dueToday(), rest = db.routine.filter(function (t) { return due.indexOf(t) < 0; });
+    var states = due.map(function (t) { return routineState(t.id); });
     var done = states.filter(function (s) { return s === 'done'; }).length;
     setSub([
       { text: fromIso(today).toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' }) },
-      { strong: true, text: !states.length ? 'היער מחכה לעץ הראשון' : done === states.length ? 'כל היער צמח היום' : done + ' מתוך ' + states.length + ' עצים צמחו היום' }
+      { strong: true, text: !states.length ? (db.routine.length ? 'אין עצים להיום' : 'היער מחכה לעץ הראשון') : done === states.length ? 'כל היער צמח היום' : done + ' מתוך ' + states.length + ' עצים צמחו היום' }
     ].concat(db.bdays.filter(function (b) { return nextBday(b).days === 0; }).map(function (b) { return { strong: true, text: 'היום יום ההולדת של ' + b.name }; })));
 
     var list = $('routineList'); list.textContent = '';
-    db.routine.forEach(function (t) { list.appendChild(routineRow(t)); });
-    list.hidden = db.routine.length === 0;
-    $('routineEmpty').hidden = db.routine.length > 0;
+    due.forEach(function (t) { list.appendChild(routineRow(t)); });
+    list.hidden = due.length === 0;
+    $('routineEmpty').hidden = due.length > 0;
+    $('routineEmpty').textContent = db.routine.length ? 'אין משימות קבועות להיום. יום פנוי ביער.' : 'היער עוד ריק. שתול כאן משימה קבועה: כל יום, בימים מסוימים בשבוע או פעם בחודש.';
+    $('otherBox').hidden = rest.length === 0;
+    $('otherSum').textContent = 'משימות של ימים אחרים (' + rest.length + ')';
+    var ol = $('otherList'); ol.textContent = '';
+    rest.forEach(function (t) { ol.appendChild(routineRow(t, true)); });
+    if (rest.some(function (t) { return t.id === editing; })) $('otherBox').open = true;
 
     var todays = datedOf(today);
     $('todayLabel').hidden = $('todayList').hidden = todays.length === 0;
@@ -1182,7 +1252,7 @@
     var warn = 'הדפדפן הזה חוסם שמירה, ולכן המשימות יימחקו ביציאה. נסה לפתוח בדפדפן רגיל, לא במצב פרטי.';
     $('footDaily').className = $('footWeek').className = $('footBdays').className = 'foot' + (storageOK ? '' : ' warn');
     $('footBdays').textContent = storageOK ? 'כל יום הולדת הוא פרח באחו, והוא נפתח בשבוע שלפני. הרשימה נשמרת רק במכשיר הזה.' : warn;
-    $('footDaily').textContent = storageOK ? 'עלה ירוק = עשיתי, עלה נושר = לא היום. כל בוקר היער מתחיל מחדש מנבטים. לחיצה על משימה פותחת עריכה.' : warn;
+    $('footDaily').textContent = storageOK ? 'עלה ירוק = עשיתי, עלה נושר = לא היום. כל בוקר היער מתחיל מחדש מנבטים, עם המשימות של אותו יום. לחיצה על משימה פותחת עריכה.' : warn;
     $('footWeek').textContent = storageOK ? 'מה שמגיע היום פורח גם בעמוד היער. הכול נשמר אוטומטית במכשיר הזה.' : warn;
   }
 
@@ -1226,12 +1296,18 @@
     $('bdMsg').textContent = !found.length ? 'לא מצאתי שורות עם שם ותאריך.' : added ? 'נוספו ' + added + '.' : 'כולם כבר ברשימה.';
   };
 
+  var addWhen = schedControls(null);
+  $('rtOpts').appendChild(addWhen.node);
+
   $('addRoutine').addEventListener('submit', function (e) {
     e.preventDefault();
     var inp = $('newRoutine'), v = inp.value.trim();
     if (!v) { inp.focus(); return; }
-    var t = { id: uid(), text: v };
+    var t = { id: uid(), text: v }, sched = addWhen.read();
+    if (sched) t.sched = sched;
     db.routine.push(t); justId = t.id; justKind = 'just-new';
+    addWhen.reset();
+    if (!isDue(t, today)) $('otherBox').open = true;
     inp.value = ''; save(); render(); inp.focus();
   });
 
