@@ -8,6 +8,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="היום שלי">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="manifest" href="manifest.json">
 <title>היום שלי</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Frank+Ruhl+Libre:wght@500;700&display=swap">
 <style>
@@ -153,6 +156,7 @@
   .stop.soon .stump { box-shadow: inset 0 0 0 3px var(--wood), inset 0 0 0 4.5px var(--wood-ring), inset 0 0 0 9px var(--wood), inset 0 0 0 10.5px var(--wood-ring), 0 0 0 4px var(--ground), 0 0 0 6.5px var(--accent); }
   .stop .txt { padding-block: 2px; min-height: 46px; }
   .stop .txt .t { font-weight: 700; font-size: 19px; }
+  .floor #backupBox { padding-block: 0 44px; margin-top: -40px; }
   .quiet { margin: 0; color: var(--on-ground-soft); }
   .label { margin: 0 0 -14px; font-size: 14px; font-weight: 600; color: var(--on-ground-soft); }
   .foot { margin: 0; font-size: 13px; color: var(--on-ground-soft); text-align: center; }
@@ -249,6 +253,16 @@
         <div class="addline"><button class="plant" type="button" id="bdImport">הוסף את הרשימה</button><span class="quiet" id="bdMsg" aria-live="polite"></span></div>
       </details>
       <p class="foot" id="footBdays"></p>
+    </section>
+
+    <section class="gutter" id="backupBox">
+      <details class="import">
+        <summary>גיבוי ושחזור</summary>
+        <p class="quiet">הגיבוי הוא טקסט שמכיל את כל המשימות וימי ההולדת. העתק אותו ושמור במקום בטוח, למשל בפתקים.</p>
+        <div class="addline"><button class="plant" type="button" id="bkCopy">העתק גיבוי</button><span class="quiet" id="bkMsg" aria-live="polite"></span></div>
+        <textarea class="fill" id="bkText" rows="4" aria-label="טקסט גיבוי" placeholder="לשחזור: הדבק כאן טקסט גיבוי"></textarea>
+        <div class="addline"><button class="ghost warn" type="button" id="bkRestore">שחזר והחלף את מה שיש כאן</button></div>
+      </details>
     </section>
   </main>
 </div>
@@ -1181,6 +1195,23 @@
   $('tabDaily').onclick = function () { go('daily'); };
   $('tabWeek').onclick = function () { go('week'); };
   $('tabBdays').onclick = function () { go('bdays'); };
+
+  $('bkCopy').onclick = function () {
+    var text = JSON.stringify(db), box = $('bkText'), msg = $('bkMsg');
+    box.value = text;
+    function manual() { box.focus(); box.select(); msg.textContent = 'סמן והעתק את הטקסט שלמטה.'; }
+    try { navigator.clipboard.writeText(text).then(function () { msg.textContent = 'הגיבוי הועתק. הדבק אותו במקום בטוח.'; }, manual); }
+    catch (e) { manual(); }
+  };
+  $('bkRestore').onclick = function () {
+    var msg = $('bkMsg'), d = null;
+    try { d = JSON.parse($('bkText').value); } catch (e) {}
+    if (!d || !Array.isArray(d.routine) || !d.marks || !d.dated) { msg.textContent = 'זה לא טקסט גיבוי תקין. הדבק את הגיבוי המלא ונסה שוב.'; return; }
+    if (!Array.isArray(d.bdays)) d.bdays = [];
+    db = d; trees = {}; flowers = {}; editing = null; firstSync = true;
+    save(); render();
+    $('bkText').value = ''; msg.textContent = 'השחזור הושלם.';
+  };
 
   $('addBday').addEventListener('submit', function (e) {
     e.preventDefault();

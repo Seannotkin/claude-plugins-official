@@ -1,0 +1,14 @@
+{
+  "name": "היום שלי",
+  "short_name": "היום שלי",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#2B5A49",
+  "theme_color": "#8FC3D8",
+  "icons": [
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}
