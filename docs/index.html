@@ -3,245 +3,303 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#EDF2EE" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0E1917" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#27485A" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#10181F" media="(prefers-color-scheme: dark)">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="היום שלי">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>היום שלי</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Karantina:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=Karantina:wght@700&family=Miriam+Libre:wght@400;700&display=swap">
 <style>
-  /* Layout: one narrow column for the thumb. Two pages behind a switch:
-     "every day" (a fixed routine, marked fresh each day) and "the week" (dated tasks for the next 7 days). */
+  /* Concept: a punch ticket. The daily routine is a multi-ride card that gets a hole punched
+     per finished task; dated tasks are appointment slips with a tear-off date stub.
+     Layout: paper objects lying on a dark counter, one narrow column. */
   :root {
-    --bg: #EDF2EE;
-    --surface: #FBFDFB;
-    --ink: #15302A;
-    --muted: #5A6F68;
-    --line: #D2DDD7;
-    --done: #1C7556;
-    --done-bg: #DCEFE5;
-    --miss: #AE4C39;
-    --miss-bg: #F6E1DA;
-    --accent: #E2A12F;
-    --on-accent: #15302A;
-    --font-display: "Karantina", "Assistant", "Arial Hebrew", system-ui, sans-serif;
-    --font-body: "Assistant", "Arial Hebrew", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color-scheme: light; /* the paper stays light in both themes, so native controls do too */
+    --desk: #27485A;
+    --on-desk: #EAF0F2;
+    --on-desk-muted: #A9BDC7;
+    --paper: #EFE8B8;
+    --paper-2: #F3CFC4;
+    --ink: #23285E;
+    --ink-soft: #5A5E8C;
+    --rule: #23285E33;
+    --perf: #23285E66;
+    --stamp: #C2281E;
+    --hole-shade: #00000080;
+    --font-display: "Karantina", "Miriam Libre", "Arial Hebrew", sans-serif;
+    --font-body: "Miriam Libre", "Arial Hebrew", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .11 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #0E1917; --surface: #162522; --ink: #E6EFEA; --muted: #8FA69E; --line: #2A3F3A;
-      --done: #5CC79E; --done-bg: #173A2F; --miss: #E58B76; --miss-bg: #40231D;
-      --accent: #F0B548; --on-accent: #0E1917; color-scheme: dark;
+      --desk: #10181F; --on-desk: #DDE5E8; --on-desk-muted: #8FA1AB;
+      --paper: #D8D1A2; --paper-2: #DDB9AE; --ink: #23285E; --ink-soft: #54588A;
+      --rule: #23285E33; --perf: #23285E66; --stamp: #B3261C; --hole-shade: #000000B3;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #0E1917; --surface: #162522; --ink: #E6EFEA; --muted: #8FA69E; --line: #2A3F3A;
-    --done: #5CC79E; --done-bg: #173A2F; --miss: #E58B76; --miss-bg: #40231D;
-    --accent: #F0B548; --on-accent: #0E1917; color-scheme: dark;
+    --desk: #10181F; --on-desk: #DDE5E8; --on-desk-muted: #8FA1AB;
+    --paper: #D8D1A2; --paper-2: #DDB9AE; --ink: #23285E; --ink-soft: #54588A;
+    --rule: #23285E33; --perf: #23285E66; --stamp: #B3261C; --hole-shade: #000000B3;
   }
 
   *, *::before, *::after { box-sizing: border-box; }
   [hidden] { display: none !important; }
   body {
     margin: 0;
-    background: var(--bg);
-    color: var(--ink);
+    background: var(--desk);
+    color: var(--on-desk);
     font-family: var(--font-body);
-    font-size: 17px;
-    line-height: 1.45;
+    font-size: 16px;
+    line-height: 1.4;
     -webkit-tap-highlight-color: transparent;
   }
   button, input, select { font: inherit; color: inherit; }
   button { cursor: pointer; }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--stamp); outline-offset: 2px; }
 
   .wrap {
-    max-width: 540px;
+    max-width: 480px;
     margin-inline: auto;
-    padding-block: 16px 48px;
+    padding-block: 14px 48px;
     padding-left: max(16px, env(safe-area-inset-left, 0px));
     padding-right: max(16px, env(safe-area-inset-right, 0px));
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+    display: flex; flex-direction: column; gap: 18px;
   }
-  .view { display: flex; flex-direction: column; gap: 20px; }
+  .view { display: flex; flex-direction: column; gap: 18px; }
 
   /* Page switch */
-  .tabs {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
-    background: var(--line); border-radius: 14px; padding: 4px;
-  }
+  .tabs { display: flex; gap: 8px; }
   .tabs button {
-    border: 0; background: none; border-radius: 10px; min-height: 44px;
-    font-weight: 700; color: var(--muted);
+    flex: 1; min-height: 44px; background: none; border-radius: 4px;
+    border: 1.5px solid var(--on-desk-muted); color: var(--on-desk); font-weight: 700;
   }
-  .tabs button[aria-selected="true"] { background: var(--surface); color: var(--ink); }
+  .tabs button[aria-selected="true"] { background: var(--paper); border-color: var(--paper); color: var(--ink); }
 
-  /* Header */
-  .head { display: flex; flex-direction: column; gap: 2px; }
-  .rel {
-    font-weight: 700; font-size: 14px; color: var(--muted);
-    display: flex; align-items: center; gap: 8px; min-height: 20px;
+  /* Shared print details */
+  .small { font-size: 12px; letter-spacing: .06em; }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+  .inkbtn {
+    height: 44px; padding: 0 16px; border: 0; border-radius: 4px;
+    background: var(--ink); color: var(--paper); font-weight: 700; flex: none;
   }
-  .rel .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
-  .dayname {
-    font-family: var(--font-display); font-weight: 700;
-    font-size: clamp(64px, 21vw, 96px); line-height: .9; margin: 0; letter-spacing: .01em;
+  .linebtn { height: 40px; padding: 0 12px; border-radius: 4px; background: none; border: 1.5px solid var(--ink-soft); font-weight: 700; font-size: 14px; }
+  .linebtn.red { border-color: var(--stamp); color: var(--stamp); }
+  .linebtn.bare { border-color: transparent; color: var(--ink-soft); }
+  .fill {
+    min-width: 0; height: 46px; padding: 0 2px; font-size: 17px;
+    background: none; border: 0; border-bottom: 2px dotted var(--ink-soft); border-radius: 0; color: var(--ink);
   }
-  .date { color: var(--muted); font-size: 16px; }
+  .fill::placeholder { color: var(--ink-soft); }
 
-  /* Progress */
-  .progress { display: flex; flex-direction: column; gap: 8px; }
-  .segs { display: flex; gap: 4px; height: 10px; }
-  .segs span { flex: 1; border-radius: 5px; background: var(--line); transition: background .25s; }
-  .segs span.done { background: var(--done); }
-  .segs span.missed { background: var(--miss); }
-  .sum { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 15px; color: var(--muted); }
-  .sum b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  /* The daily ticket */
+  .ticket {
+    position: relative; color: var(--ink);
+    background-color: var(--paper); background-image: var(--grain);
+    border-radius: 6px 6px 0 0; padding-bottom: 18px;
+  }
+  .ticket::after { /* torn lower edge */
+    content: ""; position: absolute; inset-inline: 0; bottom: 0; height: 7px;
+    background:
+      linear-gradient(-45deg, var(--desk) 4.95px, transparent 0),
+      linear-gradient(45deg, var(--desk) 4.95px, transparent 0);
+    background-size: 14px 7px; background-repeat: repeat-x; background-position: center bottom;
+  }
+  .stub { padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+  .stub .top { display: flex; justify-content: space-between; gap: 12px; color: var(--ink-soft); font-weight: 700; }
+  .weekday {
+    font-family: var(--font-display); font-weight: 700; margin: 0;
+    font-size: clamp(76px, 25vw, 104px); line-height: .82; letter-spacing: .01em;
+  }
+  .stub .bottom { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+  .tally { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  .tally i { width: 13px; height: 13px; border-radius: 50%; border: 1.5px solid var(--ink-soft); }
+  .tally i.done { border-color: transparent; background: var(--desk); box-shadow: inset 0 2px 2px var(--hole-shade); }
+  .tally i.missed { border-color: var(--stamp); background: linear-gradient(45deg, transparent 42%, var(--stamp) 42% 58%, transparent 58%); }
+  .count { font-weight: 700; }
 
-  /* Add forms */
-  .add { display: flex; flex-wrap: wrap; gap: 8px; }
-  .add input, .add select {
-    height: 52px; padding: 0 14px; min-width: 0;
-    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; font-size: 17px;
+  .perf { position: relative; border-top: 2px dashed var(--perf); }
+  .perf::before, .perf::after {
+    content: ""; position: absolute; top: -9px; width: 16px; height: 16px; border-radius: 50%; background: var(--desk);
   }
-  .add input[type="text"] { flex: 1 1 60%; }
-  .add input::placeholder { color: var(--muted); }
-  .add select { flex: 1 1 130px; }
-  .add input[type="time"] { flex: 0 1 118px; }
-  .add button {
-    height: 52px; padding: 0 20px; border: 0; border-radius: 14px;
-    background: var(--accent); color: var(--on-accent); font-weight: 700;
-  }
-  .add.week input[type="text"] { flex-basis: 100%; }
+  .perf::before { left: -8px; } .perf::after { right: -8px; }
+  .legend { padding: 8px 16px 6px; color: var(--ink-soft); border-bottom: 1px solid var(--rule); }
 
-  .btn {
-    min-height: 40px; padding: 0 14px; border-radius: 10px;
-    border: 1px solid var(--line); background: var(--surface); font-weight: 600; font-size: 15px;
+  /* Rows */
+  .rows { list-style: none; margin: 0; padding: 0; }
+  .row {
+    position: relative; display: flex; align-items: center; gap: 4px;
+    padding-block: 4px; padding-inline: 14px 6px; min-height: 60px;
+    border-bottom: 1px solid var(--rule);
   }
-  .btn.quiet { background: none; border-color: transparent; color: var(--muted); }
-  .btn.danger { color: var(--miss); }
+  .no { flex: none; width: 24px; font-size: 12px; color: var(--ink-soft); }
+  .txt {
+    flex: 1; min-width: 0; text-align: start; background: none; border: 0; border-radius: 4px;
+    padding: 8px 2px; min-height: 48px; font-size: 17px; overflow-wrap: anywhere;
+    display: flex; flex-direction: column; justify-content: center; gap: 1px;
+  }
+  .txt .when { font-size: 14px; font-weight: 500; }
+  .row[data-state="done"] .t { text-decoration: line-through; text-decoration-thickness: 1.5px; opacity: .55; }
+  .row[data-state="missed"] .t { opacity: .5; }
 
-  /* Lists */
-  .group { display: flex; flex-direction: column; gap: 8px; }
-  .group h2 {
-    margin: 0; font-size: 15px; font-weight: 700; color: var(--muted);
-    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  .x, .punch { flex: none; width: 46px; height: 48px; display: grid; place-items: center; background: none; border: 0; position: relative; }
+  .x i {
+    width: 28px; height: 28px; border: 1.5px solid var(--ink-soft); border-radius: 3px;
+    display: grid; place-items: center; color: var(--rule);
   }
-  .group h2 .d { color: var(--ink); font-size: 18px; }
-  .group h2 .free { font-weight: 400; margin-inline-start: auto; }
-  .group.today h2 .d { text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 3px; text-underline-offset: 4px; }
-  .days { display: flex; flex-direction: column; gap: 22px; }
+  .x svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+  .x[aria-pressed="true"] i { border-color: var(--stamp); color: var(--stamp); border-width: 2px; }
+  .x[aria-pressed="true"] svg { stroke-width: 3.4; }
+  .punch i { width: 32px; height: 32px; border-radius: 50%; border: 2px dashed var(--ink-soft); }
+  .punch[aria-pressed="true"] i { border-color: transparent; background: var(--desk); box-shadow: inset 0 3px 4px var(--hole-shade); }
 
-  .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-  .task {
-    display: flex; align-items: center; gap: 8px;
-    background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
-    padding-block: 6px; padding-inline: 6px 8px;
-    transition: background .2s, border-color .2s;
+  .stamp {
+    position: absolute; inset-inline-end: 104px; top: 50%; transform: translateY(-50%) rotate(-7deg);
+    font-family: var(--font-display); font-weight: 700; font-size: 22px; line-height: 1; letter-spacing: .05em;
+    color: var(--stamp); border: 2.5px solid var(--stamp); border-radius: 3px; padding: 4px 9px 2px;
+    pointer-events: none; filter: url(#ink); mix-blend-mode: multiply; white-space: nowrap;
   }
-  .task .txt {
-    flex: 1; min-width: 0; text-align: start; background: none; border: 0;
-    padding: 10px; min-height: 48px; border-radius: 10px;
-    overflow-wrap: anywhere; display: flex; flex-direction: column; justify-content: center; gap: 2px;
-  }
-  .task .tag { font-size: 13px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .marks { display: flex; gap: 6px; flex: none; }
-  .mk {
-    width: 46px; height: 46px; border-radius: 50%; border: 1.5px solid var(--line);
-    background: none; display: grid; place-items: center; color: var(--muted);
-    transition: background .15s, color .15s, border-color .15s, transform .15s;
-  }
-  .mk svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-  .mk:active { transform: scale(.92); }
-  .mk.yes[aria-pressed="true"] { background: var(--done); border-color: var(--done); color: var(--surface); }
-  .mk.no[aria-pressed="true"] { background: var(--miss); border-color: var(--miss); color: var(--surface); }
-  .task[data-state="done"] { background: var(--done-bg); border-color: transparent; }
-  .task[data-state="done"] .txt .t { text-decoration: line-through; text-decoration-thickness: 1.5px; color: var(--muted); }
-  .task[data-state="missed"] { background: var(--miss-bg); border-color: transparent; }
-  .task[data-state="missed"] .tag { color: var(--miss); }
+  .stamp.day { position: static; transform: rotate(-6deg); font-size: 17px; padding: 3px 7px 1px; margin-top: 4px; }
 
-  .edit { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 8px; padding: 4px; }
-  .edit input {
-    flex: 1 1 100%; min-width: 0; height: 46px; padding: 0 12px;
-    background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+  @media (prefers-reduced-motion: no-preference) {
+    .row.just .punch i { animation: punch .26s cubic-bezier(.3, 1.6, .5, 1); }
+    .row.just .punch::after {
+      content: ""; position: absolute; width: 28px; height: 28px; border-radius: 50%;
+      background: var(--paper); z-index: 2; pointer-events: none; animation: chad .55s ease-in forwards;
+    }
+    .row.just-missed .stamp { animation: slam .2s ease-out; }
   }
+  @keyframes punch { 0% { transform: scale(1.35); } 100% { transform: scale(1); } }
+  @keyframes chad { 0% { transform: translateY(0) rotate(0); opacity: 1; } 100% { transform: translateY(70px) rotate(110deg); opacity: 0; } }
+  @keyframes slam { 0% { transform: translateY(-50%) rotate(-7deg) scale(1.6); opacity: 0; } 100% { transform: translateY(-50%) rotate(-7deg) scale(1); opacity: 1; } }
 
-  .empty { text-align: center; color: var(--muted); padding: 28px 12px; border: 1px dashed var(--line); border-radius: 16px; }
-  .empty strong { display: block; color: var(--ink); font-family: var(--font-display); font-size: 34px; font-weight: 400; line-height: 1.1; }
+  .edit { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 0 8px; }
+  .edit .fill { flex: 1 1 100%; }
 
-  .foot { font-size: 13px; color: var(--muted); text-align: center; margin: 0; }
-  .foot.warn { color: var(--miss); font-weight: 600; }
+  .blank { padding: 18px 16px; color: var(--ink-soft); border-bottom: 1px solid var(--rule); }
+  .addline { display: flex; align-items: center; gap: 8px; padding-block: 10px 0; padding-inline: 14px 12px; }
+  .addline .fill { flex: 1; }
+
+  /* Appointment slips */
+  .slips { display: flex; flex-direction: column; gap: 10px; }
+  .slip {
+    position: relative; color: var(--ink); border-radius: 6px;
+    background-color: var(--paper-2); background-image: var(--grain);
+    display: grid; grid-template-columns: 80px minmax(0, 1fr);
+  }
+  .datestub { padding: 10px 4px 12px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .datestub .wd { font-size: 13px; font-weight: 700; }
+  .datestub .num { font-family: var(--font-display); font-weight: 700; font-size: 58px; line-height: .86; }
+  .datestub .mo { font-size: 12px; color: var(--ink-soft); }
+  .slip .body { position: relative; min-width: 0; border-inline-start: 2px dashed var(--perf); display: flex; flex-direction: column; justify-content: center; }
+  .slip .body::before, .slip .body::after {
+    content: ""; position: absolute; inset-inline-start: -9px; width: 16px; height: 16px; border-radius: 50%; background: var(--desk);
+  }
+  .slip .body::before { top: -8px; } .slip .body::after { bottom: -8px; }
+  .slip .row:last-child { border-bottom: 0; }
+  .slip .row { padding-inline-start: 12px; }
+  .free { padding: 0 16px; color: var(--ink-soft); letter-spacing: .32em; font-size: 14px; }
+
+  /* A free day is a thin strip, so busy days stand out by size. */
+  .slip.empty .datestub { flex-direction: row; justify-content: center; align-items: baseline; gap: 6px; padding: 7px 4px 6px; }
+  .slip.empty .num { font-size: 30px; line-height: 1; }
+  .slip.empty .body { min-height: 46px; }
+  .slip.empty .body::before, .slip.empty .body::after { width: 12px; height: 12px; inset-inline-start: -7px; }
+  .slip.empty .body::before { top: -6px; } .slip.empty .body::after { bottom: -6px; }
+
+  .newslip { grid-template-columns: minmax(0, 1fr); }
+  .newslip form { padding: 12px 14px 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+  .newslip .title { flex: 1 1 100%; color: var(--ink-soft); font-weight: 700; }
+  .newslip #newDated { flex: 1 1 100%; }
+  .newslip select { flex: 1 1 120px; font-size: 16px; }
+  .newslip input[type="time"] { flex: 0 1 104px; font-family: var(--font-mono); font-size: 16px; }
+
+  /* Text that sits on the counter */
+  .deskhead { display: flex; flex-direction: column; gap: 0; }
+  .deskhead .small { color: var(--on-desk-muted); font-weight: 700; }
+  .deskhead h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(64px, 20vw, 88px); line-height: .85; margin: 0; color: var(--paper); }
+  .deskhead .range { color: var(--on-desk-muted); }
+  .desklabel { color: var(--on-desk-muted); font-weight: 700; margin: 4px 0 -8px; }
+  .foot { font-size: 13px; color: var(--on-desk-muted); text-align: center; margin: 0; }
+  .foot.warn { color: var(--paper); font-weight: 700; }
 
   .toast {
     position: fixed; inset-inline: 0; bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     margin-inline: auto; width: max-content; max-width: calc(100% - 32px);
     display: flex; align-items: center; gap: 12px;
-    background: var(--ink); color: var(--bg); padding-block: 8px; padding-inline: 16px 8px;
-    border-radius: 14px; font-size: 15px;
+    background: var(--paper); color: var(--ink); padding-block: 6px; padding-inline: 14px 6px;
+    border-radius: 4px; font-size: 15px; box-shadow: 0 6px 18px var(--hole-shade);
   }
-  .toast button { background: none; border: 0; color: var(--accent); font-weight: 700; min-height: 36px; padding: 0 10px; }
-
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  .toast button { background: none; border: 0; color: var(--stamp); font-weight: 700; min-height: 40px; padding: 0 10px; }
 </style>
 
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <filter id="ink" x="-10%" y="-20%" width="120%" height="140%">
+    <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="4" result="n"/>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="2.2" result="d"/>
+    <feTurbulence type="fractalNoise" baseFrequency=".5" numOctaves="1" seed="9" result="m"/>
+    <feColorMatrix in="m" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.2 1.75" result="mask"/>
+    <feComposite in="d" in2="mask" operator="in"/>
+  </filter>
+</svg>
+
 <div class="wrap" dir="rtl" lang="he">
   <div class="tabs" role="tablist" aria-label="עמודים">
     <button type="button" role="tab" id="tabDaily" aria-controls="viewDaily">כל יום</button>
     <button type="button" role="tab" id="tabWeek" aria-controls="viewWeek">השבוע</button>
   </div>
 
-  <!-- Page 1: the routine that repeats every day -->
+  <!-- Page 1: the routine, as one punch ticket per day -->
   <section class="view" id="viewDaily" role="tabpanel" aria-labelledby="tabDaily">
-    <header class="head">
-      <div class="rel"><span class="dot"></span>היום</div>
-      <h1 class="dayname" id="dayname"></h1>
-      <div class="date" id="date"></div>
-    </header>
+    <article class="ticket">
+      <header class="stub">
+        <div class="top small"><span>כרטיסייה יומית</span><span class="mono" id="serial" dir="ltr"></span></div>
+        <h1 class="weekday" id="weekday"></h1>
+        <div class="bottom">
+          <span id="date"></span>
+          <span class="count" id="count" aria-live="polite"></span>
+        </div>
+        <div class="tally" id="tally" aria-hidden="true"></div>
+      </header>
+      <div class="perf"></div>
+      <div class="legend small">ניקוב = עשיתי · ✕ = לא עשיתי</div>
+      <ul class="rows" id="routineList"></ul>
+      <div class="blank" id="routineEmpty" hidden>הכרטיסייה ריקה. כתוב למטה משימה שחוזרת כל יום, והיא תודפס כאן מחדש בכל בוקר.</div>
+      <form class="addline" id="addRoutine" autocomplete="off">
+        <span class="no mono" id="nextNo"></span>
+        <input class="fill" id="newRoutine" type="text" placeholder="משימה לכל יום…" aria-label="משימה חדשה לכל יום" maxlength="200" enterkeyhint="done">
+        <button class="inkbtn" type="submit">הוסף</button>
+      </form>
+    </article>
 
-    <section class="progress" aria-live="polite">
-      <div class="segs" id="segs"></div>
-      <div class="sum" id="sum"></div>
-    </section>
-
-    <form class="add" id="addRoutine" autocomplete="off">
-      <input id="newRoutine" type="text" placeholder="משימה לכל יום…" aria-label="משימה חדשה לכל יום" maxlength="200" enterkeyhint="done">
-      <button type="submit">הוסף</button>
-    </form>
-
-    <ul class="list" id="routineList"></ul>
-    <div class="empty" id="routineEmpty" hidden>
-      <strong>מה עושים כל יום?</strong>
-      כתוב כאן משימות שחוזרות כל יום, כמו לשתות מים או ללמוד 20 דקות. הסימונים מתאפסים כל בוקר.
-    </div>
-
-    <div class="group" id="todayExtra" hidden>
-      <h2>רק היום, מתוך השבוע</h2>
-      <ul class="list" id="todayList"></ul>
-    </div>
+    <p class="desklabel small" id="todayLabel" hidden>זימונים להיום, מתוך השבוע</p>
+    <div class="slips" id="todaySlip" hidden></div>
   </section>
 
-  <!-- Page 2: dated tasks for the next seven days -->
+  <!-- Page 2: dated tasks for the next seven days, one slip per day -->
   <section class="view" id="viewWeek" role="tabpanel" aria-labelledby="tabWeek" hidden>
-    <header class="head">
-      <div class="rel">7 הימים הקרובים</div>
-      <h1 class="dayname">השבוע</h1>
-      <div class="date" id="range"></div>
+    <header class="deskhead">
+      <span class="small">פנקס זימונים · 7 ימים</span>
+      <h1>השבוע</h1>
+      <span class="range" id="range"></span>
     </header>
 
-    <form class="add week" id="addDated" autocomplete="off">
-      <input id="newDated" type="text" placeholder="למשל: תור לרופא…" aria-label="משימה חדשה לשבוע" maxlength="200" enterkeyhint="done">
-      <select id="datedDay" aria-label="באיזה יום"></select>
-      <input id="datedTime" type="time" aria-label="שעה, לא חובה">
-      <button type="submit">הוסף</button>
-    </form>
+    <div class="slip newslip">
+      <form id="addDated" autocomplete="off">
+        <span class="title small">זימון חדש</span>
+        <input class="fill" id="newDated" type="text" placeholder="למשל: תור לרופא…" aria-label="משימה חדשה לשבוע" maxlength="200" enterkeyhint="done">
+        <select class="fill" id="datedDay" aria-label="באיזה יום"></select>
+        <input class="fill" id="datedTime" type="time" aria-label="שעה, לא חובה">
+        <button class="inkbtn" type="submit">הוסף</button>
+      </form>
+    </div>
 
-    <div class="days" id="days"></div>
+    <div class="slips" id="days"></div>
   </section>
 
   <p class="foot" id="foot"></p>
@@ -266,7 +324,8 @@
   function fromIso(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
   function shift(s, n) { var d = fromIso(s); d.setDate(d.getDate() + n); return iso(d); }
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
-  function weekdayName(day) { return fromIso(day).toLocaleDateString('he-IL', { weekday: 'long' }); }
+  var WEEKDAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+  function wd(day) { return WEEKDAYS[fromIso(day).getDay()]; }
   function dayMonth(day) { return fromIso(day).toLocaleDateString('he-IL', { day: 'numeric', month: 'long' }); }
 
   // routine: tasks that repeat every day. marks: what was ticked on each date.
@@ -302,6 +361,7 @@
   var today = iso(new Date());
   var view = location.hash === '#week' ? 'week' : 'daily';
   var editing = null;
+  var justId = null, justState = null; // the row that was marked a moment ago, for the punch animation
   var undoFn = null, toastTimer = null;
   var db = load();
 
@@ -317,10 +377,7 @@
     if (text != null) e.textContent = text;
     return e;
   }
-  var ICON = {
-    yes: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
-    no: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>'
-  };
+  var X_ICON = '<i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></i>';
 
   function routineState(id) { return (db.marks[today] || {})[id] || 'open'; }
   function setRoutineState(id, s) {
@@ -345,16 +402,17 @@
     save(); render();
   };
 
-  // One task row. o: {id, text, state, tag, onState(newState), onText(newText), onDelete()}
+  // One printed line. o: {id, no, text, when, state, onState(s), onText(v), onDelete()}
   function row(o) {
-    var li = el('li', 'task'); li.dataset.state = o.state;
+    var li = el('li', 'row'); li.dataset.state = o.state;
+    if (o.no) li.appendChild(el('span', 'no mono', o.no));
     if (editing === o.id) {
       var form = el('form', 'edit');
-      var inp = el('input'); inp.type = 'text'; inp.value = o.text; inp.maxLength = 200;
+      var inp = el('input', 'fill'); inp.type = 'text'; inp.value = o.text; inp.maxLength = 200;
       inp.id = 'edit-' + o.id; inp.setAttribute('aria-label', 'עריכת משימה');
-      var ok = el('button', 'btn', 'שמור'); ok.type = 'submit';
-      var del = el('button', 'btn danger', 'מחק'); del.type = 'button';
-      var cancel = el('button', 'btn quiet', 'ביטול'); cancel.type = 'button';
+      var ok = el('button', 'inkbtn', 'שמור'); ok.type = 'submit'; ok.style.height = '40px';
+      var del = el('button', 'linebtn red', 'מחק'); del.type = 'button';
+      var cancel = el('button', 'linebtn bare', 'ביטול'); cancel.type = 'button';
       form.onsubmit = function (e) {
         e.preventDefault();
         var v = inp.value.trim();
@@ -370,87 +428,105 @@
     }
     var txt = el('button', 'txt'); txt.type = 'button';
     txt.setAttribute('aria-label', 'ערוך: ' + o.text);
+    if (o.when) txt.appendChild(el('span', 'when mono', o.when));
     txt.appendChild(el('span', 't', o.text));
-    var tag = [o.tag, o.state === 'missed' ? 'לא בוצע' : ''].filter(Boolean).join(' · ');
-    if (tag) txt.appendChild(el('span', 'tag', tag));
     txt.onclick = function () { editing = o.id; render(); };
     li.appendChild(txt);
+    if (o.state === 'missed') li.appendChild(el('span', 'stamp', 'לא בוצע'));
 
-    var marks = el('div', 'marks');
-    [['yes', 'done', 'עשיתי'], ['no', 'missed', 'לא עשיתי']].forEach(function (m) {
-      var b = el('button', 'mk ' + m[0]); b.type = 'button';
-      b.innerHTML = ICON[m[0]];
-      b.setAttribute('aria-label', m[2]);
-      b.setAttribute('aria-pressed', String(o.state === m[1]));
-      b.onclick = function () { o.onState(o.state === m[1] ? 'open' : m[1]); save(); render(); };
-      marks.appendChild(b);
-    });
-    li.appendChild(marks);
+    function mark(target) {
+      var next = o.state === target ? 'open' : target;
+      justId = next === 'open' ? null : o.id; justState = next;
+      o.onState(next); save(); render();
+    }
+    var x = el('button', 'x'); x.type = 'button'; x.innerHTML = X_ICON;
+    x.setAttribute('aria-label', 'לא עשיתי'); x.setAttribute('aria-pressed', String(o.state === 'missed'));
+    x.onclick = function () { mark('missed'); };
+    var p = el('button', 'punch'); p.type = 'button'; p.appendChild(el('i'));
+    p.setAttribute('aria-label', 'עשיתי'); p.setAttribute('aria-pressed', String(o.state === 'done'));
+    p.onclick = function () { mark('done'); };
+    li.appendChild(x); li.appendChild(p);
+
+    if (justId === o.id) li.classList.add(justState === 'done' ? 'just' : 'just-missed');
     return li;
   }
 
-  function routineRow(t) {
+  function routineRow(t, i) {
     return row({
-      id: t.id, text: t.text, state: routineState(t.id), tag: '',
+      id: t.id, no: pad(i + 1), text: t.text, state: routineState(t.id), when: '',
       onState: function (s) { setRoutineState(t.id, s); },
       onText: function (v) { t.text = v; },
       onDelete: function () {
-        var i = db.routine.indexOf(t);
-        db.routine.splice(i, 1);
-        return function () { db.routine.splice(Math.min(i, db.routine.length), 0, t); };
+        var at = db.routine.indexOf(t);
+        db.routine.splice(at, 1);
+        return function () { db.routine.splice(Math.min(at, db.routine.length), 0, t); };
       }
     });
   }
   function datedRow(t, day) {
     return row({
-      id: t.id, text: t.text, state: t.state || 'open', tag: t.time || '',
+      id: t.id, no: '', text: t.text, state: t.state || 'open', when: t.time || '',
       onState: function (s) { t.state = s; },
       onText: function (v) { t.text = v; },
       onDelete: function () {
-        var arr = db.dated[day], i = arr.indexOf(t);
-        arr.splice(i, 1);
+        var arr = db.dated[day], at = arr.indexOf(t);
+        arr.splice(at, 1);
         if (!arr.length) delete db.dated[day];
         return function () {
           var a = db.dated[day] || (db.dated[day] = []);
-          a.splice(Math.min(i, a.length), 0, t);
+          a.splice(Math.min(at, a.length), 0, t);
         };
       }
     });
   }
 
-  function renderDaily() {
-    $('dayname').textContent = weekdayName(today);
-    $('date').textContent = fromIso(today).toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' });
-
-    var todays = datedOf(today);
-    var states = db.routine.map(function (t) { return routineState(t.id); })
-      .concat(todays.map(function (t) { return t.state || 'open'; }));
-
-    var segs = $('segs'); segs.textContent = '';
-    if (!states.length) segs.appendChild(el('span'));
-    states.forEach(function (s) { segs.appendChild(el('span', s === 'open' ? '' : s)); });
-
-    var done = states.filter(function (s) { return s === 'done'; }).length;
-    var missed = states.filter(function (s) { return s === 'missed'; }).length;
-    var open = states.length - done - missed;
-    var sum = $('sum'); sum.textContent = '';
-    if (states.length) {
-      var a = el('span'); a.appendChild(document.createTextNode('בוצעו '));
-      a.appendChild(el('b', '', done + ' מתוך ' + states.length));
-      sum.appendChild(a);
-      sum.appendChild(el('span', '', done === states.length ? 'הכול בוצע. כל הכבוד!' :
-        [open ? open + ' פתוחות' : '', missed ? missed + ' לא בוצעו' : ''].filter(Boolean).join(' · ')));
-    } else {
-      sum.appendChild(el('span', '', 'אין עדיין משימות'));
+  // A day's appointment slip: tear-off date stub plus that day's lines.
+  function slip(day, n) {
+    var d = fromIso(day), tasks = datedOf(day);
+    var s = el('article', 'slip' + (tasks.length ? '' : ' empty'));
+    var stub = el('div', 'datestub');
+    stub.appendChild(el('span', 'wd', (tasks.length ? 'יום ' : '') + wd(day)));
+    stub.appendChild(el('span', 'num', d.getDate()));
+    if (tasks.length) {
+      stub.appendChild(el('span', 'mo', d.toLocaleDateString('he-IL', { month: 'long' })));
+      if (n === 0) stub.appendChild(el('span', 'stamp day', 'היום'));
+      else if (n === 1) stub.appendChild(el('span', 'mo', '(מחר)'));
     }
+    s.appendChild(stub);
+    var body = el('div', 'body');
+    if (tasks.length) {
+      var ul = el('ul', 'rows');
+      tasks.forEach(function (t) { ul.appendChild(datedRow(t, day)); });
+      body.appendChild(ul);
+    } else {
+      body.appendChild(el('span', 'free', (n === 0 ? 'היום · ' : n === 1 ? 'מחר · ' : '') + 'פנוי'));
+    }
+    s.appendChild(body);
+    return s;
+  }
+
+  function renderDaily() {
+    var d = fromIso(today);
+    $('serial').textContent = '№ ' + pad(d.getDate()) + pad(d.getMonth() + 1) + String(d.getFullYear()).slice(2);
+    $('weekday').textContent = wd(today);
+    $('date').textContent = d.toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    var states = db.routine.map(function (t) { return routineState(t.id); });
+    var done = states.filter(function (s) { return s === 'done'; }).length;
+    var tally = $('tally'); tally.textContent = '';
+    states.forEach(function (s) { tally.appendChild(el('i', s === 'open' ? '' : s)); });
+    $('count').textContent = !states.length ? '' :
+      done === states.length ? 'נוקבה כולה. כל הכבוד!' : 'נוקבו ' + done + ' מתוך ' + states.length;
 
     var list = $('routineList'); list.textContent = '';
-    db.routine.forEach(function (t) { list.appendChild(routineRow(t)); });
+    db.routine.forEach(function (t, i) { list.appendChild(routineRow(t, i)); });
     $('routineEmpty').hidden = db.routine.length > 0;
+    $('nextNo').textContent = pad(db.routine.length + 1);
 
-    $('todayExtra').hidden = todays.length === 0;
-    var tl = $('todayList'); tl.textContent = '';
-    todays.forEach(function (t) { tl.appendChild(datedRow(t, today)); });
+    var has = datedOf(today).length > 0;
+    $('todayLabel').hidden = !has; $('todaySlip').hidden = !has;
+    var ts = $('todaySlip'); ts.textContent = '';
+    if (has) ts.appendChild(slip(today, 0));
   }
 
   function renderWeek() {
@@ -460,30 +536,14 @@
     sel.textContent = '';
     for (var i = 0; i < 7; i++) {
       var day = shift(today, i), d = fromIso(day);
-      var opt = el('option', '', (i === 0 ? 'היום' : i === 1 ? 'מחר' : weekdayName(day)) + ' · ' + d.getDate() + '.' + (d.getMonth() + 1));
+      var opt = el('option', '', (i === 0 ? 'היום' : i === 1 ? 'מחר' : 'יום ' + wd(day)) + ' · ' + d.getDate() + '.' + (d.getMonth() + 1));
       opt.value = day;
       sel.appendChild(opt);
     }
     if (chosen >= today && chosen <= shift(today, 6)) sel.value = chosen;
 
     var days = $('days'); days.textContent = '';
-    for (var j = 0; j < 7; j++) {
-      (function (day, n) {
-        var tasks = datedOf(day);
-        var g = el('section', 'group' + (n === 0 ? ' today' : ''));
-        var h = el('h2');
-        h.appendChild(el('span', 'd', n === 0 ? 'היום' : n === 1 ? 'מחר' : weekdayName(day)));
-        h.appendChild(el('span', '', (n < 2 ? weekdayName(day) + ', ' : '') + dayMonth(day)));
-        if (!tasks.length) h.appendChild(el('span', 'free', 'פנוי'));
-        g.appendChild(h);
-        if (tasks.length) {
-          var ul = el('ul', 'list');
-          tasks.forEach(function (t) { ul.appendChild(datedRow(t, day)); });
-          g.appendChild(ul);
-        }
-        days.appendChild(g);
-      })(shift(today, j), j);
-    }
+    for (var j = 0; j < 7; j++) days.appendChild(slip(shift(today, j), j));
   }
 
   function render() {
@@ -492,14 +552,15 @@
     $('tabDaily').setAttribute('aria-selected', String(view === 'daily'));
     $('tabWeek').setAttribute('aria-selected', String(view === 'week'));
     if (view === 'daily') renderDaily(); else renderWeek();
+    justId = null;
 
     var foot = $('foot');
     foot.className = 'foot' + (storageOK ? '' : ' warn');
     foot.textContent = !storageOK
       ? 'הדפדפן הזה חוסם שמירה, ולכן המשימות יימחקו ביציאה. נסה לפתוח בדפדפן רגיל, לא במצב פרטי.'
       : view === 'daily'
-        ? 'הרשימה חוזרת כל יום והסימונים מתאפסים בבוקר. לחיצה על משימה פותחת עריכה ומחיקה.'
-        : 'משימה שהגיע היום שלה מופיעה גם בעמוד ״כל יום״. הכול נשמר אוטומטית במכשיר הזה.';
+        ? 'כל בוקר מודפסת כרטיסייה חדשה עם אותן משימות. לחיצה על משימה פותחת עריכה ומחיקה.'
+        : 'זימון שהגיע היום שלו מופיע גם בעמוד ״כל יום״. הכול נשמר אוטומטית במכשיר הזה.';
   }
 
   function go(v) {
