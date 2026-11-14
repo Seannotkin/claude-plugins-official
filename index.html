@@ -94,7 +94,7 @@
   @keyframes settle { from { opacity: .25; } to { opacity: 1; } }
   .tabs { display: flex; gap: 6px; }
   .tabs button {
-    min-height: 44px; padding: 0 16px; background: none; border: 0; font-weight: 600;
+    min-height: 44px; padding: 0 15px; background: none; border: 0; font-weight: 600; white-space: nowrap;
     color: var(--on-sky-soft); border-radius: 22px 6px 22px 6px;
   }
   .tabs button[aria-selected="true"] { background: var(--on-sky); color: var(--sky-2); }
@@ -145,6 +145,14 @@
   .edit { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 0 10px; }
   .edit .fill { flex: 1 1 100%; }
 
+  .addline.bd #bdName { flex-basis: 100%; }
+  .addline.bd select { flex: 1 1 84px; }
+  .import summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: var(--on-ground-soft); font-weight: 600; }
+  .import[open] { display: flex; flex-direction: column; gap: 10px; }
+  textarea.fill { width: 100%; height: auto; padding: 10px 12px; font-size: 16px; line-height: 1.5; border: 1.5px solid var(--on-ground-soft); border-radius: 12px; resize: vertical; }
+  .stop.soon .stump { box-shadow: inset 0 0 0 3px var(--wood), inset 0 0 0 4.5px var(--wood-ring), inset 0 0 0 9px var(--wood), inset 0 0 0 10.5px var(--wood-ring), 0 0 0 4px var(--ground), 0 0 0 6.5px var(--accent); }
+  .stop .txt { padding-block: 2px; min-height: 46px; }
+  .stop .txt .t { font-weight: 700; font-size: 19px; }
   .quiet { margin: 0; color: var(--on-ground-soft); }
   .label { margin: 0 0 -14px; font-size: 14px; font-weight: 600; color: var(--on-ground-soft); }
   .foot { margin: 0; font-size: 13px; color: var(--on-ground-soft); text-align: center; }
@@ -189,8 +197,9 @@
     <svg class="frond" id="frondB" viewBox="0 0 190 190" aria-hidden="true"></svg>
     <div class="gutter">
       <div class="tabs" role="tablist" aria-label="עמודים">
-        <button type="button" role="tab" id="tabDaily" aria-controls="viewDaily">היער · כל יום</button>
-        <button type="button" role="tab" id="tabWeek" aria-controls="viewWeek">השביל · השבוע</button>
+        <button type="button" role="tab" id="tabDaily" aria-controls="viewDaily">כל יום</button>
+        <button type="button" role="tab" id="tabWeek" aria-controls="viewWeek">השבוע</button>
+        <button type="button" role="tab" id="tabBdays" aria-controls="viewBdays">ימי הולדת</button>
       </div>
       <h1 class="title" id="title"></h1>
       <div class="sub" id="sub" aria-live="polite"></div>
@@ -222,6 +231,25 @@
       <div class="trail" id="days"></div>
       <p class="foot" id="footWeek"></p>
     </section>
+
+    <!-- Page 3: birthdays, nearest first. Names live only in this browser, never in the page itself. -->
+    <section class="gutter" id="viewBdays" role="tabpanel" aria-labelledby="tabBdays" hidden>
+      <form class="addline bd" id="addBday" autocomplete="off">
+        <input class="fill" id="bdName" type="text" placeholder="של מי יום ההולדת?" aria-label="שם" maxlength="60" enterkeyhint="done">
+        <select class="fill" id="bdDay" aria-label="יום בחודש"></select>
+        <select class="fill" id="bdMonth" aria-label="חודש"></select>
+        <button class="plant" type="submit">הוסף</button>
+      </form>
+      <div class="trail" id="bdayList"></div>
+      <p class="quiet" id="bdayEmpty" hidden>עוד אין כאן ימי הולדת. הוסף אחד למעלה, או הדבק רשימה שלמה למטה.</p>
+      <details class="import">
+        <summary>הדבקת רשימה שלמה</summary>
+        <p class="quiet">שורה לכל אדם, שם ותאריך. למשל: אמא, 19.3</p>
+        <textarea class="fill" id="bdPaste" rows="5" aria-label="רשימת ימי הולדת"></textarea>
+        <div class="addline"><button class="plant" type="button" id="bdImport">הוסף את הרשימה</button><span class="quiet" id="bdMsg" aria-live="polite"></span></div>
+      </details>
+      <p class="foot" id="footBdays"></p>
+    </section>
   </main>
 </div>
 
@@ -250,13 +278,13 @@
 
   // routine: tasks that repeat every day. marks: what was ticked on each date.
   // dated: one-off tasks kept under the date they belong to.
-  function blank() { return { routine: [], marks: {}, dated: {} }; }
+  function blank() { return { routine: [], marks: {}, dated: {}, bdays: [] }; }
   function load() {
     try {
       var raw = localStorage.getItem(KEY);
       if (raw) {
         var d = JSON.parse(raw);
-        if (d && d.routine && d.marks && d.dated) return d;
+        if (d && d.routine && d.marks && d.dated) { if (!d.bdays) d.bdays = []; return d; }
       }
       var old = localStorage.getItem(OLD_KEY);
       if (old) {
@@ -279,7 +307,7 @@
   }
 
   var today = iso(new Date());
-  var view = location.hash === '#week' ? 'week' : 'daily';
+  var view = location.hash === '#week' ? 'week' : location.hash === '#birthdays' ? 'bdays' : 'daily';
   var editing = null;
   var justId = null, justKind = ''; // the row touched a moment ago, so it can animate in
   var undoFn = null, toastTimer = null;
@@ -827,7 +855,7 @@
 
   // Bring the forest in line with the data: one tree per daily task, one flower per task due today.
   function syncScene() {
-    $('scene').classList.toggle('short', view === 'week');
+    $('scene').classList.toggle('short', view !== 'daily');
     fit(); sky = null;
     var n = db.routine.length, D = n <= 4 ? 4 : 3;
     order = [];
@@ -862,6 +890,17 @@
         F.x = W * (0.1 + 0.8 * (j + 0.5) / due.length + F.off); F.y = H * 0.975;
         florder.push(F);
       });
+    }
+    if (view === 'bdays') { // one flower per birthday; it opens during the week before the day
+      db.bdays.map(function (b) { return { b: b, n: nextBday(b).days }; }).sort(function (a, c) { return a.n - c.n; }).slice(0, 14).forEach(function (it) {
+        var F = flowers[it.b.id], r = rng(hash(it.b.id));
+        if (!F) F = flowers[it.b.id] = { ph: r() * 6.28, col: PETALS[Math.floor(r() * PETALS.length)], b: 0, dr: 0 };
+        else { r(); r(); }
+        F.state = it.n <= 7 ? 'done' : 'open';
+        F.x = W * (0.08 + r() * 0.84); F.y = H * (0.87 + r() * 0.1);
+        florder.push(F);
+      });
+      florder.sort(function (a, c) { return a.y - c.y; });
     }
     firstSync = false;
     wake();
@@ -976,7 +1015,7 @@
     setSub([
       { text: fromIso(today).toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' }) },
       { strong: true, text: !states.length ? 'היער מחכה לעץ הראשון' : done === states.length ? 'כל היער צמח היום' : done + ' מתוך ' + states.length + ' עצים צמחו היום' }
-    ]);
+    ].concat(db.bdays.filter(function (b) { return nextBday(b).days === 0; }).map(function (b) { return { strong: true, text: 'היום יום ההולדת של ' + b.name }; })));
 
     var list = $('routineList'); list.textContent = '';
     db.routine.forEach(function (t) { list.appendChild(routineRow(t)); });
@@ -1030,29 +1069,131 @@
     }
   }
 
+  var MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+  function nextBday(b) {
+    var t = fromIso(today), y = t.getFullYear();
+    function at(yr) { return new Date(yr, b.m - 1, Math.min(b.d, new Date(yr, b.m, 0).getDate())); } // 29.2 falls on 28.2 in a short year
+    var d = at(y); if (d < t) d = at(y + 1);
+    return { date: d, days: Math.round((d - t) / 864e5) };
+  }
+  function inWords(n) { return n === 0 ? 'היום!' : n === 1 ? 'מחר' : n === 2 ? 'בעוד יומיים' : n < 45 ? 'בעוד ' + n + ' ימים' : 'בעוד כ-' + Math.round(n / 30.4) + ' חודשים'; }
+  function fillSelect(sel, items, value) {
+    sel.textContent = '';
+    items.forEach(function (it) { var o = el('option', '', it[1]); o.value = it[0]; sel.appendChild(o); });
+    sel.value = value;
+  }
+  function dayItems() { var a = []; for (var i = 1; i <= 31; i++) a.push([i, i]); return a; }
+  function monthItems() { return MONTHS.map(function (m, i) { return [i + 1, m]; }); }
+  function parseBdays(text) {
+    var out = [];
+    text.split(/\n+/).forEach(function (line) {
+      var m = line.match(/(\d{1,2})\s*[.\/\-]\s*(\d{1,2})(?:\s*[.\/\-]\s*\d{2,4})?/);
+      if (!m) return;
+      var d = +m[1], mo = +m[2];
+      if (mo < 1 || mo > 12 || d < 1 || d > 31) return;
+      var name = line.replace(m[0], ' ').replace(/[,;:|\t]+/g, ' ').replace(/\s+/g, ' ').replace(/^[\s\-–—.]+|[\s\-–—.]+$/g, '');
+      if (name) out.push({ name: name.slice(0, 60), d: d, m: mo });
+    });
+    return out;
+  }
+  function addBdays(list) {
+    var added = 0;
+    list.forEach(function (b) {
+      if (db.bdays.some(function (x) { return x.name === b.name && x.d === b.d && x.m === b.m; })) return;
+      db.bdays.push({ id: uid(), name: b.name, d: b.d, m: b.m }); added++;
+    });
+    return added;
+  }
+
+  function renderBdays() {
+    $('title').textContent = 'ימי הולדת';
+    var list = db.bdays.map(function (b) { return { b: b, n: nextBday(b) }; }).sort(function (a, c) { return a.n.days - c.n.days; });
+    setSub([
+      { text: list.length === 0 ? 'עוד לא נרשמו' : list.length === 1 ? 'יום הולדת אחד' : list.length + ' ימי הולדת' },
+      { strong: true, text: list.length ? 'הקרוב: ' + list[0].b.name + ', ' + inWords(list[0].n.days) : '' }
+    ]);
+    if (!$('bdDay').options.length) { fillSelect($('bdDay'), dayItems(), 1); fillSelect($('bdMonth'), monthItems(), fromIso(today).getMonth() + 1); }
+
+    var box = $('bdayList'); box.textContent = '';
+    box.hidden = list.length === 0; $('bdayEmpty').hidden = list.length > 0;
+    list.forEach(function (it) {
+      var b = it.b, n = it.n;
+      var stop = el('section', 'stop' + (n.days === 0 ? ' today' : n.days <= 7 ? ' soon' : ''));
+      stop.appendChild(el('div', 'stump', b.d));
+      if (editing === b.id) {
+        var form = el('form', 'edit');
+        var name = el('input', 'fill'); name.type = 'text'; name.value = b.name; name.maxLength = 60; name.id = 'edit-' + b.id; name.setAttribute('aria-label', 'שם');
+        var sd = el('select', 'fill'), sm = el('select', 'fill');
+        sd.setAttribute('aria-label', 'יום בחודש'); sm.setAttribute('aria-label', 'חודש'); sd.style.flex = sm.style.flex = '1 1 84px';
+        fillSelect(sd, dayItems(), b.d); fillSelect(sm, monthItems(), b.m);
+        var ok = el('button', 'plant', 'שמור'); ok.type = 'submit'; ok.style.height = '42px';
+        var del = el('button', 'ghost warn', 'מחק'); del.type = 'button';
+        var cancel = el('button', 'ghost bare', 'ביטול'); cancel.type = 'button';
+        form.onsubmit = function (e) {
+          e.preventDefault();
+          var v = name.value.trim();
+          if (v) { b.name = v; b.d = +sd.value; b.m = +sm.value; save(); }
+          editing = null; render();
+        };
+        del.onclick = function () {
+          var at = db.bdays.indexOf(b); db.bdays.splice(at, 1); editing = null;
+          showToast(function () { db.bdays.splice(Math.min(at, db.bdays.length), 0, b); });
+          save(); render();
+        };
+        cancel.onclick = function () { editing = null; render(); };
+        [name, sd, sm, ok, del, cancel].forEach(function (x) { form.appendChild(x); });
+        stop.appendChild(form);
+      } else {
+        var txt = el('button', 'txt'); txt.type = 'button'; txt.setAttribute('aria-label', 'ערוך: ' + b.name);
+        txt.appendChild(el('span', 't', b.name));
+        txt.appendChild(el('span', 'tag', b.d + ' ב' + MONTHS[b.m - 1] + ' · יום ' + WEEKDAYS[n.date.getDay()] + ' · ' + inWords(n.days)));
+        txt.onclick = function () { editing = b.id; render(); };
+        stop.appendChild(txt);
+      }
+      box.appendChild(stop);
+    });
+  }
+
   function render() {
     $('viewDaily').hidden = view !== 'daily';
     $('viewWeek').hidden = view !== 'week';
+    $('viewBdays').hidden = view !== 'bdays';
     $('tabDaily').setAttribute('aria-selected', String(view === 'daily'));
     $('tabWeek').setAttribute('aria-selected', String(view === 'week'));
-    if (view === 'daily') renderDaily(); else renderWeek();
+    $('tabBdays').setAttribute('aria-selected', String(view === 'bdays'));
+    if (view === 'daily') renderDaily(); else if (view === 'week') renderWeek(); else renderBdays();
     syncScene();
     justId = null;
 
     var warn = 'הדפדפן הזה חוסם שמירה, ולכן המשימות יימחקו ביציאה. נסה לפתוח בדפדפן רגיל, לא במצב פרטי.';
-    $('footDaily').className = $('footWeek').className = 'foot' + (storageOK ? '' : ' warn');
+    $('footDaily').className = $('footWeek').className = $('footBdays').className = 'foot' + (storageOK ? '' : ' warn');
+    $('footBdays').textContent = storageOK ? 'כל יום הולדת הוא פרח באחו, והוא נפתח בשבוע שלפני. הרשימה נשמרת רק במכשיר הזה.' : warn;
     $('footDaily').textContent = storageOK ? 'עלה ירוק = עשיתי, עלה נושר = לא היום. כל בוקר היער מתחיל מחדש מנבטים. לחיצה על משימה פותחת עריכה.' : warn;
     $('footWeek').textContent = storageOK ? 'מה שמגיע היום פורח גם בעמוד היער. הכול נשמר אוטומטית במכשיר הזה.' : warn;
   }
 
   function go(v) {
     view = v; editing = null;
-    try { history.replaceState(null, '', v === 'week' ? '#week' : '#daily'); } catch (e) {}
+    try { history.replaceState(null, '', v === 'week' ? '#week' : v === 'bdays' ? '#birthdays' : '#daily'); } catch (e) {}
     render();
     window.scrollTo(0, 0);
   }
   $('tabDaily').onclick = function () { go('daily'); };
   $('tabWeek').onclick = function () { go('week'); };
+  $('tabBdays').onclick = function () { go('bdays'); };
+
+  $('addBday').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var inp = $('bdName'), v = inp.value.trim();
+    if (!v) { inp.focus(); return; }
+    addBdays([{ name: v, d: +$('bdDay').value, m: +$('bdMonth').value }]);
+    inp.value = ''; save(); render();
+  });
+  $('bdImport').onclick = function () {
+    var found = parseBdays($('bdPaste').value), added = addBdays(found);
+    if (added) { $('bdPaste').value = ''; save(); render(); }
+    $('bdMsg').textContent = !found.length ? 'לא מצאתי שורות עם שם ותאריך.' : added ? 'נוספו ' + added + '.' : 'כולם כבר ברשימה.';
+  };
 
   $('addRoutine').addEventListener('submit', function (e) {
     e.preventDefault();
