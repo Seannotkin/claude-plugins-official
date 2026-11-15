@@ -14,6 +14,8 @@ HELP = """I make short videos for your Instagram and post them only after you ap
 • Send me any message — I turn it into a video.
 • /new — make a video on a topic I choose
 • /niche <text> — set what the account is about
+• /pause — stop making videos (when you need your PC); /resume — start again
+• /status — see whether I am paused
 • Under each video: ✅ Post it · 🔁 Redo · ❌ Drop
 • Reply to a video with what to change and I remake it.
 • Reply to a video with "caption: <new text>" to change only the caption."""
@@ -33,6 +35,9 @@ def make_video(plan: dict, cfg: dict) -> Path:
 
 
 def generate(state: dict, cfg: dict, brief=None, feedback=None):
+    if state.get("paused"):
+        tg.say("⏸ I'm paused, so I didn't make that video. Send /resume when your PC is free.")
+        return
     niche = state.get("niche") or cfg.get("niche")
     if not niche:
         tg.say("Tell me what the account is about first:\n/niche <your topic and audience>")
@@ -101,6 +106,16 @@ def handle(update: dict, state: dict, cfg: dict):
             tg.say(f"Niche set: {rest}\nSend /new for the first video.")
         else:
             tg.say(f"Current niche: {state.get('niche') or cfg.get('niche') or '(not set)'}")
+    elif command in ("/pause", "/resume"):
+        state["paused"] = command == "/pause"
+        save_state(state)
+        tg.say("⏸ Paused. I won't make any videos until you send /resume. "
+               "You can still approve videos I already sent." if state["paused"]
+               else "▶️ Resumed. Scheduled videos are back on; send /new for one now.")
+    elif command == "/status":
+        tg.say(("⏸ Paused." if state.get("paused") else "▶️ Running.")
+               + f"\nNiche: {state.get('niche') or cfg.get('niche') or '(not set)'}"
+               + f"\nDaily videos at (UTC hours): {cfg.get('slots_utc', [])}")
     elif command == "/new":
         generate(state, cfg, brief=rest or None)
     elif "video" in replied and text.lower().startswith("caption:"):
@@ -135,6 +150,8 @@ def tick(state: dict, cfg: dict, wait: int = 0, now=None):
     if state["auto"].get(day, 0) < due:
         state["auto"][day] = due  # missed slots are skipped, not sent in a burst
         save_state(state)
+        if state.get("paused"):
+            return  # the slot is used up, so resuming does not start a render by surprise
         try:
             generate(state, cfg)
         except Exception as e:

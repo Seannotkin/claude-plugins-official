@@ -15,6 +15,8 @@ Claude writes the script ─► free neural voiceover ─► stock footage (Pexe
 | any message, e.g. `3 mistakes people make with protein` | makes a video about that |
 | `/new` | makes a video on a topic it chooses for your niche |
 | `/niche home workouts for busy parents` | sets what the account is about |
+| `/pause` and `/resume` | stops and restarts video making, for when you need the PC yourself |
+| `/status` | says whether it is paused |
 | tap ✅ / 🔁 / ❌ under a video | posts it / makes another one / drops it |
 | reply to a video with `make the hook stronger` | remakes it with your feedback |
 | reply to a video with `caption: new text` | changes only the caption |
@@ -37,7 +39,14 @@ posted without your tap, and the bot ignores everyone except your chat.
 
 ## Run it
 
-**On any computer or server that stays on** (answers Telegram instantly):
+**On Windows:** install [Python](https://www.python.org/downloads/) (tick "Add to PATH"), run
+`winget install Gyan.FFmpeg` in a terminal, copy `.env.example` to `.env` and fill in the six
+values, then double-click `start.bat`. Keep that window open; closing it stops the bot.
+
+While paused the bot only listens for your messages, which uses almost no CPU. A video that is
+already being made when you send `/pause` is finished first (a minute or two).
+
+**On macOS or Linux** (answers Telegram instantly):
 
 ```bash
 sudo apt install ffmpeg fonts-dejavu-core   # macOS: brew install ffmpeg

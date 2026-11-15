@@ -1,8 +1,10 @@
 """Cut the scenes together with ffmpeg: 1080x1920, voiceover, burned-in captions."""
+import os
 import subprocess
 from pathlib import Path
 
 W, H, FPS = 1080, 1920, 30
+FONT = "Arial" if os.name == "nt" else "DejaVu Sans"
 
 ASS_HEAD = f"""[Script Info]
 ScriptType: v4.00+
@@ -12,7 +14,7 @@ WrapStyle: 0
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BackColour, Bold, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV
-Style: Cap,DejaVu Sans,92,&H00FFFFFF,&H00000000,&H80000000,-1,1,7,2,5,90,90,0
+Style: Cap,{FONT},92,&H00FFFFFF,&H00000000,&H80000000,-1,1,7,2,5,90,90,0
 
 [Events]
 Format: Layer, Start, End, Style, Text

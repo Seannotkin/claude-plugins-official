@@ -35,7 +35,7 @@ def load_config() -> dict:
 
 
 def load_state() -> dict:
-    state = {"niche": "", "history": [], "auto": {}, "offset": 0}
+    state = {"niche": "", "history": [], "auto": {}, "offset": 0, "paused": False}
     if STATE_FILE.exists():
         state.update(json.loads(STATE_FILE.read_text()))
     return state

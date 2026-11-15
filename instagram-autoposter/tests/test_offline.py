@@ -138,3 +138,21 @@ def test_updates_are_acknowledged_before_they_run(env):
     fake.queue = [tap("approve")]
     pipeline.tick(state, CFG, now=datetime(2026, 1, 1, 1, tzinfo=timezone.utc))
     assert posted and config.load_state()["offset"] == 3
+
+
+def test_pause_stops_requested_and_scheduled_videos_until_resume(env):
+    fake, posted, state = env
+    state["niche"] = "sleep"
+    made = lambda: sum(1 for m, _ in fake.calls if m == "sendVideo")
+    pipeline.handle(msg("/pause"), state, CFG)
+    assert config.load_state()["paused"] is True
+    pipeline.handle(msg("/new"), state, CFG)
+    pipeline.tick(state, CFG, now=datetime(2026, 1, 1, 16, tzinfo=timezone.utc))
+    assert made() == 0
+    pipeline.handle(tap("approve"), state, CFG)  # approving stays possible while paused
+    assert posted == ["cap #tag"]
+    pipeline.handle(msg("/resume"), state, CFG)
+    pipeline.tick(state, CFG, now=datetime(2026, 1, 1, 17, tzinfo=timezone.utc))
+    assert made() == 0  # the slot missed while paused is not replayed
+    pipeline.handle(msg("/new"), state, CFG)
+    assert made() == 1
