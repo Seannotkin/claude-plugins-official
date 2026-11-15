@@ -1,0 +1,15 @@
+# What the account is about. You can also set this from Telegram with:  /niche <text>
+niche: ""
+language: English
+
+# Videos created automatically per day, at these hours (UTC). You can always ask for more with /new.
+slots_utc: [15]
+
+video:
+  max_seconds: 25        # short videos get rewatched more
+  scenes: 5              # number of cuts
+
+voice:
+  provider: edge         # edge = free neural voice, none = captions only
+  name: en-US-AndrewNeural
+  rate: "+8%"
